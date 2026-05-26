@@ -44,17 +44,30 @@ export class GoogleOAuthController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
-    const status = await this.oauthService.handleCallback(code, state);
-    const redirect = this.config.get<string>('googleOAuth.successRedirectUrl');
-    if (redirect) {
-      const url = new URL(redirect);
-      url.searchParams.set('googleConnected', status.connected ? '1' : '0');
-      return res.redirect(url.toString());
+    try {
+      if (!code?.trim() || !state?.trim()) {
+        return res.status(400).json({
+          message: 'Google OAuth callback missing code or state.',
+        });
+      }
+      const status = await this.oauthService.handleCallback(code.trim(), state.trim());
+      const redirect = this.config.get<string>('googleOAuth.successRedirectUrl');
+      if (redirect) {
+        const url = new URL(redirect);
+        url.searchParams.set('googleConnected', status.connected ? '1' : '0');
+        return res.redirect(url.toString());
+      }
+      return res.json({
+        message: 'Google Calendar connected successfully.',
+        status,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return res.status(400).json({
+        message: 'Google OAuth callback failed.',
+        error: message,
+      });
     }
-    return res.json({
-      message: 'Google Calendar connected successfully.',
-      status,
-    });
   }
 
   @Delete('disconnect')
