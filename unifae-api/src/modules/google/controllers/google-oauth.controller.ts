@@ -8,7 +8,6 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { CurrentUser } from '../../identity-access/decorators/current-user.decorator';
-import { GoogleOAuthCallbackQueryDto } from '../dto/google-oauth-callback-query.dto';
 import { GoogleOAuthService } from '../services/google-oauth.service';
 
 @Controller('google/oauth')
@@ -35,10 +34,17 @@ export class GoogleOAuthController {
     return this.oauthService.buildAuthorizationUrl(actor);
   }
 
-  /** Public callback — Google redirects the browser here with ?code=&state= */
+  /**
+   * Public callback — Google redirects the browser here with ?code=&state= (&iss=, etc.).
+   * Uses explicit @Query params so extra Google params are not rejected by ValidationPipe.
+   */
   @Get('callback')
-  async callback(@Query() query: GoogleOAuthCallbackQueryDto, @Res() res: Response) {
-    const status = await this.oauthService.handleCallback(query.code, query.state);
+  async callback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
+    const status = await this.oauthService.handleCallback(code, state);
     const redirect = this.config.get<string>('googleOAuth.successRedirectUrl');
     if (redirect) {
       const url = new URL(redirect);
