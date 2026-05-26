@@ -1,6 +1,12 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   CareLocationEntity,
   CourseCareLocationEntity,
@@ -16,6 +22,12 @@ import {
 import { GoogleMeetService } from '../../infra/google-meet/google-meet.service';
 import { CreatePatientAppointmentDto } from './dto/create-patient-appointment.dto';
 import { UpdatePatientAppointmentDto } from './dto/update-patient-appointment.dto';
+import { AppointmentScheduleValidator } from './validators/appointment-schedule.validator';
+import { APPOINTMENT_NOTIFICATION_PORT } from './ports/appointment-notification.port';
+import type {
+  AppointmentNotificationPort,
+  AppointmentNotificationPayload,
+} from './ports/appointment-notification.port';
 
 export type AppointmentRow = {
   id: number;
@@ -35,6 +47,7 @@ export type AppointmentRow = {
   careLocationName: string | null;
   careLocationAddress: string | null;
   meetUrl: string | null;
+  meetCalendarEventId: string | null;
   notes: string | null;
 };
 
@@ -67,6 +80,9 @@ export class PatientAppointmentsService {
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
     private readonly googleMeet: GoogleMeetService,
+    private readonly scheduleValidator: AppointmentScheduleValidator,
+    @Inject(APPOINTMENT_NOTIFICATION_PORT)
+    private readonly notifications: AppointmentNotificationPort,
   ) {}
 
   private assertStaff(actor: UserEntity) {
@@ -169,7 +185,27 @@ export class PatientAppointmentsService {
       careLocationName: row.careLocation?.name ?? null,
       careLocationAddress: row.careLocation?.address ?? null,
       meetUrl: row.meetUrl,
+      meetCalendarEventId: row.meetCalendarEventId,
       notes: row.notes,
+    };
+  }
+
+  private toNotificationPayload(row: PatientAppointmentEntity): AppointmentNotificationPayload {
+    const endsAt = new Date(row.scheduledAt.getTime() + row.durationMinutes * 60_000);
+    return {
+      appointmentId: row.id,
+      patientId: row.patientId,
+      patientName: row.patient?.user?.name ?? '—',
+      patientPhone: null,
+      patientEmail: row.patient?.user?.email ?? null,
+      professionalName: row.professional?.name ?? '—',
+      scheduledAt: row.scheduledAt.toISOString(),
+      endsAt: endsAt.toISOString(),
+      modality: row.modality,
+      status: row.status,
+      meetUrl: row.meetUrl,
+      careLocationName: row.careLocation?.name ?? null,
+      careLocationAddress: row.careLocation?.address ?? null,
     };
   }
 
@@ -317,6 +353,15 @@ export class PatientAppointmentsService {
       throw new ForbiddenException('Profissional fora do escopo permitido.');
     }
 
+    const durationMinutes = dto.durationMinutes ?? 50;
+
+    await this.scheduleValidator.assertNoConflict({
+      patientId: patient.id,
+      professionalUserId,
+      scheduledAt,
+      durationMinutes,
+    });
+
     if (dto.modality === AppointmentModality.IN_PERSON) {
       if (!dto.careLocationId) {
         throw new BadRequestException('Informe o local para atendimento presencial.');
@@ -361,7 +406,7 @@ export class PatientAppointmentsService {
         professionalUserId,
         createdByUserId: actor.id,
         scheduledAt,
-        durationMinutes: dto.durationMinutes ?? 50,
+        durationMinutes,
         modality: dto.modality,
         careLocationId: dto.modality === AppointmentModality.IN_PERSON ? dto.careLocationId ?? null : null,
         meetUrl,
@@ -375,6 +420,9 @@ export class PatientAppointmentsService {
       where: { id: saved.id },
       relations: { patient: { user: true }, professional: true, careLocation: true },
     });
+    if (full) {
+      await this.notifications.notifyAppointmentScheduled(this.toNotificationPayload(full));
+    }
     return this.mapRow(full!);
   }
 
@@ -387,12 +435,23 @@ export class PatientAppointmentsService {
     if (!row) throw new NotFoundException('Agendamento não encontrado.');
     await this.assertCanManageAppointment(actor, row);
 
+    const previousStatus = row.status;
+    const previousEventId = row.meetCalendarEventId;
+
     if (dto.scheduledAt) {
       const d = new Date(dto.scheduledAt);
       if (Number.isNaN(d.getTime())) throw new BadRequestException('Data/hora inválida.');
       row.scheduledAt = d;
     }
     if (dto.durationMinutes != null) row.durationMinutes = dto.durationMinutes;
+
+    await this.scheduleValidator.assertNoConflict({
+      patientId: row.patientId,
+      professionalUserId: dto.professionalUserId ?? row.professionalUserId,
+      scheduledAt: row.scheduledAt,
+      durationMinutes: row.durationMinutes,
+      excludeAppointmentId: row.id,
+    });
     if (dto.professionalUserId != null) row.professionalUserId = dto.professionalUserId;
     if (dto.status != null) row.status = dto.status;
     if (dto.notes !== undefined) row.notes = dto.notes?.trim() || null;
@@ -405,7 +464,31 @@ export class PatientAppointmentsService {
       throw new BadRequestException('Atendimento presencial exige local.');
     }
 
+    if (
+      row.modality === AppointmentModality.ONLINE &&
+      row.meetCalendarEventId &&
+      (dto.scheduledAt || dto.durationMinutes != null)
+    ) {
+      const patientEmail = row.patient?.user?.email;
+      const professionalEmail = row.professional?.email;
+      await this.googleMeet.updateConference(row.meetCalendarEventId, {
+        summary: `Consulta — ${row.patient?.user?.name ?? 'Paciente'}`,
+        description: row.notes ?? undefined,
+        startAt: row.scheduledAt,
+        durationMinutes: row.durationMinutes,
+        attendeeEmails: [patientEmail, professionalEmail].filter(Boolean) as string[],
+      });
+    }
+
     await this.appointments.save(row);
+
+    if (dto.status === AppointmentStatus.CANCELLED && previousStatus !== AppointmentStatus.CANCELLED) {
+      await this.googleMeet.cancelConference(previousEventId);
+      await this.notifications.notifyAppointmentCancelled(this.toNotificationPayload(row));
+    } else {
+      await this.notifications.notifyAppointmentUpdated(this.toNotificationPayload(row));
+    }
+
     return this.mapRow(row);
   }
 

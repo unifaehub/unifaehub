@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
+import { GoogleCalendarMeetService } from '../../modules/google/services/google-calendar-meet.service';
 
 export type MeetConferenceInput = {
   summary: string;
@@ -13,29 +14,48 @@ export type MeetConferenceInput = {
 export type MeetConferenceResult = {
   meetUrl: string;
   calendarEventId: string | null;
-  provider: 'google' | 'stub';
+  provider: 'google-oauth' | 'google-service-account' | 'stub';
 };
 
+/**
+ * Facade for Meet creation — prefers OAuth2 refresh_token, then service account JWT, then dev stub.
+ */
 @Injectable()
 export class GoogleMeetService {
   private readonly logger = new Logger(GoogleMeetService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly oauthMeet: GoogleCalendarMeetService,
+  ) {}
 
   async createConference(input: MeetConferenceInput): Promise<MeetConferenceResult> {
+    if (await this.oauthMeet.isOAuthConnected()) {
+      try {
+        const result = await this.oauthMeet.createConference(input);
+        return {
+          meetUrl: result.meetUrl,
+          calendarEventId: result.calendarEventId,
+          provider: result.provider,
+        };
+      } catch (err) {
+        this.logger.warn(`OAuth Meet creation failed: ${String(err)}`);
+      }
+    }
+
     const enabled = this.config.get<boolean>('googleMeet.enabled');
     const email = this.config.get<string>('googleMeet.serviceAccountEmail') ?? '';
     const privateKey = this.config.get<string>('googleMeet.serviceAccountPrivateKey') ?? '';
 
     if (enabled && email && privateKey) {
       try {
-        return await this.createViaGoogleCalendar(input, email, privateKey);
+        return await this.createViaServiceAccount(input, email, privateKey);
       } catch (err) {
-        this.logger.warn(`Falha ao criar Google Meet: ${String(err)}`);
+        this.logger.warn(`Service account Meet creation failed: ${String(err)}`);
       }
     }
 
-    const stubBase = this.config.get<string>('googleMeet.stubBaseUrl') ?? '';
+    const stubBase = this.config.get<string>('googleMeet.stubMeetBaseUrl') ?? '';
     if (stubBase) {
       const code = randomBytes(5).toString('hex');
       return {
@@ -46,11 +66,28 @@ export class GoogleMeetService {
     }
 
     throw new BadRequestException(
-      'Integração Google Meet não configurada. Defina GOOGLE_MEET_ENABLED e credenciais ou GOOGLE_MEET_STUB_BASE_URL para homologação.',
+      'Google Meet is not configured. Connect Google OAuth, configure a service account, or set GOOGLE_MEET_STUB_BASE_URL for staging.',
     );
   }
 
-  private async createViaGoogleCalendar(
+  async cancelConference(calendarEventId: string | null): Promise<void> {
+    if (!calendarEventId) return;
+    if (await this.oauthMeet.isOAuthConnected()) {
+      await this.oauthMeet.cancelConference(calendarEventId);
+    }
+  }
+
+  async updateConference(
+    calendarEventId: string | null,
+    input: Partial<MeetConferenceInput>,
+  ): Promise<void> {
+    if (!calendarEventId) return;
+    if (await this.oauthMeet.isOAuthConnected()) {
+      await this.oauthMeet.updateConference(calendarEventId, input);
+    }
+  }
+
+  private async createViaServiceAccount(
     input: MeetConferenceInput,
     serviceAccountEmail: string,
     privateKey: string,
@@ -79,7 +116,7 @@ export class GoogleMeetService {
         attendees: input.attendeeEmails.map((email) => ({ email })),
         conferenceData: {
           createRequest: {
-            requestId: randomBytes(8).toString('hex'),
+            requestId: `meet-${Date.now()}`,
             conferenceSolutionKey: { type: 'hangoutsMeet' },
           },
         },
@@ -92,13 +129,13 @@ export class GoogleMeetService {
       null;
 
     if (!meetUrl) {
-      throw new BadRequestException('Google Calendar não retornou link do Meet.');
+      throw new BadRequestException('Google Calendar did not return a Meet link.');
     }
 
     return {
       meetUrl,
       calendarEventId: event.data.id ?? null,
-      provider: 'google',
+      provider: 'google-service-account',
     };
   }
 }

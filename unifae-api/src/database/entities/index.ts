@@ -21,6 +21,7 @@ export * from './prescription-item-step.entity';
 export * from './care-location.entity';
 export * from './course-care-location.entity';
 export * from './patient-appointment.entity';
+export * from './google-oauth-credential.entity';
 export * from './patient-execution.entity';
 export * from './patient-assessment.entity';
 export * from './patient-pain-log.entity';

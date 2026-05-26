@@ -1,4 +1,5 @@
 import { ValidationPipe } from '@nestjs/common';
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
@@ -46,6 +47,7 @@ function filterAppSwaggerDocument(document: OpenAPIObject): OpenAPIObject {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
+  app.useGlobalFilters(new GlobalHttpExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

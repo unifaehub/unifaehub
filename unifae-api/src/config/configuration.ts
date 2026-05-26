@@ -46,6 +46,17 @@ export default () => ({
     /** Quando a API do Google não está configurada, gera link de demonstração (somente dev/homolog). */
     stubMeetBaseUrl: process.env.GOOGLE_MEET_STUB_BASE_URL?.trim() ?? '',
   },
+  googleOAuth: {
+    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID?.trim() ?? '',
+    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim() ?? '',
+    redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI?.trim() ?? '',
+    /** AES key material — never commit production values. Min 16 characters. */
+    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY?.trim() ?? '',
+    calendarId: process.env.GOOGLE_CALENDAR_ID?.trim() ?? 'primary',
+    /** Frontend URL after successful OAuth (optional). */
+    successRedirectUrl: process.env.GOOGLE_OAUTH_SUCCESS_REDIRECT?.trim() ?? '',
+    stateTtlSeconds: parseInt(process.env.GOOGLE_OAUTH_STATE_TTL_SECONDS ?? '600', 10),
+  },
   passwordReset: {
     tokenTtlMinutes: parseInt(process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES ?? '60', 10),
     /** Ex.: unifae://redefinir-senha — o app abre com ?token= */
