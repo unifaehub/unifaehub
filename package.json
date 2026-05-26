@@ -1,0 +1,20 @@
+{
+  "name": "unifae-platform",
+  "private": true,
+  "description": "UNIFAE — API (NestJS) + Management (Vue). Um comando para desenvolver.",
+  "scripts": {
+    "predev": "node scripts/ensure.mjs",
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run start:dev --prefix unifae-api\" \"node scripts/wait-for-api.mjs && npm run dev --prefix unifae-management -- --host 0.0.0.0 --port 5173",
+    "setup": "node scripts/setup.mjs",
+    "build": "npm run build --prefix unifae-api && npm run build --prefix unifae-management",
+    "seed": "npm run seed --prefix unifae-api",
+    "seed:full": "npm run seed:full --prefix unifae-api",
+    "dev:api": "npm run start:dev --prefix unifae-api",
+    "dev:web": "npm run dev --prefix unifae-management",
+    "build:api": "npm run build --prefix unifae-api",
+    "build:web": "npm run build --prefix unifae-management"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

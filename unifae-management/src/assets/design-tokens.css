@@ -1,0 +1,25 @@
+/**
+ * Tokens alinhados a src/base/.../clinical_clarity/DESIGN.md (Clinical Editorial)
+ */
+:root {
+  --uf-bg: #f8fafb;
+  --uf-surface: #f8fafb;
+  --uf-surface-container: #eceeef;
+  --uf-surface-container-low: #f2f4f5;
+  --uf-surface-container-high: #e6e8e9;
+  --uf-surface-container-lowest: #ffffff;
+  --uf-on-surface: #191c1d;
+  --uf-on-surface-variant: #40493d;
+  --uf-primary: #0d631b;
+  --uf-primary-container: #2e7d32;
+  --uf-on-primary: #ffffff;
+  --uf-secondary-container: #c6e9be;
+  --uf-on-secondary-container: #4c6a48;
+  --uf-tertiary: #923357;
+  --uf-outline-variant: rgba(191, 202, 186, 0.35);
+  --uf-error: #ba1a1a;
+  --uf-tonal-shadow: 0 12px 40px rgba(25, 28, 29, 0.05);
+  --uf-radius-md: 0.375rem;
+  --uf-radius-xl: 0.5rem;
+  --uf-font: 'Manrope', system-ui, sans-serif;
+}

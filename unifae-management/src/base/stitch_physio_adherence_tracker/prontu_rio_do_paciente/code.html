@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e1e3e4",
+                        "inverse-on-surface": "#eff1f2",
+                        "on-surface-variant": "#40493d",
+                        "outline": "#707a6c",
+                        "surface-container-highest": "#e1e3e4",
+                        "tertiary-fixed": "#ffd9e2",
+                        "primary-fixed-dim": "#88d982",
+                        "on-tertiary-fixed": "#3f001c",
+                        "tertiary-container": "#b14b6f",
+                        "surface-dim": "#d8dadb",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb1c7",
+                        "outline-variant": "#bfcaba",
+                        "on-primary-fixed": "#002204",
+                        "secondary-container": "#c6e9be",
+                        "secondary": "#476644",
+                        "primary-container": "#2e7d32",
+                        "on-secondary-fixed-variant": "#304e2e",
+                        "on-secondary-fixed": "#052106",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "surface-bright": "#f8fafb",
+                        "primary": "#0d631b",
+                        "surface": "#f8fafb",
+                        "inverse-surface": "#2e3132",
+                        "surface-tint": "#1b6d24",
+                        "surface-container-low": "#f2f4f5",
+                        "on-primary-container": "#cbffc2",
+                        "surface-container": "#eceeef",
+                        "on-surface": "#191c1d",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#88d982",
+                        "secondary-fixed-dim": "#add0a6",
+                        "background": "#f8fafb",
+                        "secondary-fixed": "#c9ecc1",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#191c1d",
+                        "on-primary-fixed-variant": "#005312",
+                        "surface-container-high": "#e6e8e9",
+                        "primary-fixed": "#a3f69c",
+                        "on-tertiary-fixed-variant": "#7f2448",
+                        "on-tertiary-container": "#ffedf0",
+                        "error": "#ba1a1a",
+                        "tertiary": "#923357",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#4c6a48"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Manrope"],
+                        "label": ["Manrope"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #bfcaba; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Editorial Sidebar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 px-4 h-screen w-64 border-r-0 bg-slate-50 dark:bg-[#151819] z-50">
+<div class="mb-10 px-4">
+<h1 class="text-xl font-bold bg-gradient-to-r from-[#0d631b] to-[#2e7d32] bg-clip-text text-transparent">UNIFAE Care</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold opacity-70">Clinical Editorial</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active state: Pacientes -->
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span>Cursos</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>Usuários</span>
+</a>
+<!-- Active Item: Pacientes -->
+<a class="flex items-center gap-3 px-4 py-2 text-white bg-gradient-to-r from-[#0d631b] to-[#2e7d32] rounded-full shadow-lg shadow-green-900/10 font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="personal_injury" style="font-variation-settings: 'FILL' 1;">personal_injury</span>
+<span>Pacientes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span>Exercícios</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="category">category</span>
+<span>Categorias</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="medication">medication</span>
+<span>Prescrições</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+<span>Aprovações</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span>Relatórios</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span>Logs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors font-['Manrope'] text-sm tracking-tight scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Configurações</span>
+</a>
+</nav>
+<div class="mt-auto px-4 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<img alt="UNIFAE Institutional Logo" class="w-10 h-10 rounded-full object-cover" data-alt="professional portrait of a female doctor in a white medical coat with a stethoscope around her neck, high-end studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByYppwd35Mz11mZRnN6aE_Ca4DB_kTpg-0BTTygVdVg647ODu8N0NVEKpAKrj-3Tka3qzfPIADdUZH9p1QqBTY1NNuV-GfqhaT_slkiOhBz8Tac2iysX6K-lKu95ON2npDS3FClnWjuHkzqfmmBKkMYVB3p_nzoSwh4Pk7csuJ8I9Sxw3LQOH1NnZhQg4IO7-8k2RMg01Zso9bJrpwqIiE6eOtnEPvkLHlOgDzuR58K_tim-ZnlXqUtITurkrYkBZtX5AedDUS7iU"/>
+<div>
+<p class="text-xs font-bold text-on-surface">Dr. Ricardo Silva</p>
+<p class="text-[10px] text-on-surface-variant">Administrator</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Top Bar -->
+<header class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-40 ml-64 max-w-[calc(100%-16rem)] bg-[#f8fafb]/80 dark:bg-[#191c1d]/80 backdrop-blur-xl">
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-[#0d631b]/20 transition-all font-['Manrope']" placeholder="Buscar prontuário..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="relative text-on-surface-variant hover:text-[#0d631b] transition-all">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<button class="text-on-surface-variant hover:text-[#0d631b] transition-all">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-6 w-[1px] bg-outline-variant/30"></div>
+<button class="text-sm font-semibold text-[#0d631b] hover:opacity-80 transition-all">Sair</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 p-8 min-h-screen bg-surface-container-low">
+<!-- Breadcrumbs & Header -->
+<div class="mb-8">
+<nav class="flex items-center gap-2 text-[11px] font-semibold text-on-surface-variant/60 uppercase tracking-widest mb-2">
+<a class="hover:text-primary transition-colors" href="#">Pacientes</a>
+<span class="material-symbols-outlined text-xs" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface">Maria Aparecida Souza</span>
+</nav>
+<div class="flex items-end gap-6 justify-between">
+<div>
+<h2 class="text-4xl font-extrabold tracking-tighter text-on-surface leading-tight">Maria Aparecida Souza</h2>
+<div class="flex items-center gap-3 mt-1">
+<span class="text-sm font-medium text-on-surface-variant">ID: #44892-00</span>
+<span class="px-3 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded-full uppercase tracking-wider">Ativo</span>
+</div>
+</div>
+<div class="flex gap-3 pb-1">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-surface-container-lowest text-on-surface font-semibold text-sm rounded-xl hover:bg-surface-container transition-all active:scale-95">
+<span class="material-symbols-outlined text-lg" data-icon="share">share</span>
+                        Compartilhar
+                    </button>
+<button class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-container text-white font-semibold text-sm rounded-xl shadow-md shadow-green-900/10 hover:opacity-90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+                        Editar Perfil
+                    </button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-10 gap-8">
+<!-- Left Column (70%) -->
+<div class="col-span-7 space-y-8">
+<!-- Patient Summary Bento Section -->
+<div class="grid grid-cols-3 gap-6">
+<div class="col-span-1 bg-surface-container-lowest p-6 rounded-xl">
+<p class="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Dados Básicos</p>
+<div class="space-y-4">
+<div>
+<p class="text-xs text-on-surface-variant">Idade e Sexo</p>
+<p class="text-lg font-bold text-on-surface">62 anos, Feminino</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant">Tipo Sanguíneo</p>
+<p class="text-lg font-bold text-on-surface">O+</p>
+</div>
+</div>
+</div>
+<div class="col-span-2 bg-surface-container-lowest p-6 rounded-xl">
+<p class="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-1">Diagnóstico Primário</p>
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" data-icon="medical_services">medical_services</span>
+</div>
+<div>
+<p class="text-lg font-bold text-on-surface leading-tight">Pós-operatório de Artroplastia Total de Ombro</p>
+<p class="text-sm text-on-surface-variant mt-1 italic">CID: M19.01 - Artrose primária do ombro</p>
+<div class="mt-3 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<p class="text-xs font-semibold text-primary">Fisioterapeuta Responsável: Dra. Julia Mendes</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Medical History Section -->
+<section class="bg-surface-container-lowest p-8 rounded-xl">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xl font-bold tracking-tight">Histórico Clínico</h3>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary" data-icon="history_edu">history_edu</span>
+</div>
+<div class="grid grid-cols-2 gap-8">
+<div>
+<h4 class="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-4">Notas Clínicas &amp; Lesões Anteriores</h4>
+<div class="space-y-4">
+<div class="p-4 bg-surface-container-low rounded-xl border-l-4 border-primary/40">
+<p class="text-sm font-bold text-on-surface mb-1">Cirurgia de Reparo de Manguito Rotador</p>
+<p class="text-xs text-on-surface-variant leading-relaxed">Realizada há 5 anos no mesmo membro. Apresentou quadro de fibrose capsular residual.</p>
+<p class="text-[10px] mt-2 font-semibold opacity-40">20 de Março, 2019</p>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed">Paciente relata queixas persistentes de dor noturna (EVA 7) e limitação funcional severa para abdução e rotação externa antes do procedimento atual.</p>
+</div>
+</div>
+<div>
+<h4 class="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest mb-4">Medicação Atual</h4>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 p-3 bg-tertiary/5 rounded-xl">
+<span class="material-symbols-outlined text-tertiary text-lg" data-icon="pill">pill</span>
+<div>
+<p class="text-sm font-bold text-on-surface">Celecoxibe 200mg</p>
+<p class="text-[10px] text-on-surface-variant">1x ao dia - Após o almoço</p>
+</div>
+</li>
+<li class="flex items-center gap-3 p-3 bg-surface-container rounded-xl">
+<span class="material-symbols-outlined text-on-surface-variant text-lg" data-icon="pill">pill</span>
+<div>
+<p class="text-sm font-bold text-on-surface">Pregabalina 75mg</p>
+<p class="text-[10px] text-on-surface-variant">1x ao dia - Noturno</p>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- Treatment Plan Table -->
+<section class="bg-surface-container-lowest overflow-hidden rounded-xl">
+<div class="p-8 pb-4 flex items-center justify-between">
+<h3 class="text-xl font-bold tracking-tight">Plano de Tratamento (Fase II)</h3>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container text-on-surface-variant text-[10px] font-bold rounded-full">3 Exercícios Restantes</span>
+</div>
+</div>
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest">
+<th class="px-8 py-4">Exercício</th>
+<th class="px-4 py-4">Séries/Reps</th>
+<th class="px-4 py-4">Descanso</th>
+<th class="px-4 py-4 text-right">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-surface-container-low hover:bg-surface-container-low/30 transition-colors">
+<td class="px-8 py-5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Shoulder exercise demo" class="w-full h-full object-cover" data-alt="close up of a person performing resistance band shoulder external rotation exercises with a clinical green background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrZJyJh3o4DpDul3xTBg7q9wRSwiBysjCv7x3_u1Y1eOSs8Bz_X_U7qWrZCFo3QU4u2EYjps7gIznFIemw3IpA40xVKneFpcvwvYy9ujf4dLNJR1WFcl6B8JKS-CpUsVZg0GbwUjow_fmed2GYVQNYE63wVtd0Vge-EHHSqhqhi_GKMsIZGASAOzP0UHtMi0ZW_MIeZ8TccKkwbr-DDD_UgXPuTfACIXjnre3UICWwl0QXpozyDsw1xi8TD4w-Le_e1jmO4WvBl4E"/>
+</div>
+<div>
+<p class="font-bold">Pendular de Codman</p>
+<p class="text-[10px] text-on-surface-variant">Aquecimento passivo</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-5 font-medium">3 x 15</td>
+<td class="px-4 py-5 text-on-surface-variant">30s</td>
+<td class="px-8 py-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary/10 text-secondary rounded-full text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                        CONCLUÍDO
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-surface-container-low hover:bg-surface-container-low/30 transition-colors">
+<td class="px-8 py-5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Shoulder exercise demo" class="w-full h-full object-cover" data-alt="a physiotherapy patient using a pulley system for shoulder mobilization, soft lighting, professional clinical setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2UEWxAjr7QDkBmf9Abrc3WqUHo_eJgqJuievLWnxs7LERPR5r6YCaRNwRTaUQXTd0omaVmMsz7nqvGlFGGZxHfVg9ciQ5fVo3mJzIbFyGqAU299r1wqSV-vVKWAabO_tkK8n9WLdp6wPq6-_7sVEfMPaQiaDEX7z2tydtX2sPDozyIIC5dR19_twcr-KeNeb8itTh0kNb-Q5OqwXbs2odRIZ30syCvimnRWIu99jYxBxEZaKskCO9bs0hcQ1-BxRslk5L0cKimVc"/>
+</div>
+<div>
+<p class="font-bold">Mobilização com Polia</p>
+<p class="text-[10px] text-on-surface-variant">Flexão assistida</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-5 font-medium">3 x 10</td>
+<td class="px-4 py-5 text-on-surface-variant">60s</td>
+<td class="px-8 py-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        EM ANDAMENTO
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="px-8 py-5">
+<div class="flex items-center gap-4 opacity-50">
+<div class="w-10 h-10 rounded-lg bg-surface-container"></div>
+<div>
+<p class="font-bold">Isometria de Rotação</p>
+<p class="text-[10px] text-on-surface-variant">Fortalecimento leve</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-5 font-medium opacity-50">4 x 20s</td>
+<td class="px-4 py-5 text-on-surface-variant opacity-50">45s</td>
+<td class="px-8 py-5 text-right">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container text-on-surface-variant/50 rounded-full text-[10px] font-bold">
+                                        PENDENTE
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- Clinical Evolution Chart Placeholder -->
+<section class="bg-surface-container-lowest p-8 rounded-xl">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="text-xl font-bold tracking-tight">Evolução Clínica</h3>
+<p class="text-xs text-on-surface-variant">Níveis de dor e adesão nos últimos 30 dias</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Adesão</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Nível de Dor</span>
+</div>
+</div>
+</div>
+<!-- Visual representation of a chart using Tailwind -->
+<div class="h-48 flex items-end justify-between gap-2 px-2 relative">
+<!-- Simulated Grid Lines -->
+<div class="absolute inset-x-0 h-[1px] bg-outline-variant/10 bottom-0"></div>
+<div class="absolute inset-x-0 h-[1px] bg-outline-variant/10 bottom-1/4"></div>
+<div class="absolute inset-x-0 h-[1px] bg-outline-variant/10 bottom-2/4"></div>
+<div class="absolute inset-x-0 h-[1px] bg-outline-variant/10 bottom-3/4"></div>
+<!-- Simulated Bars -->
+<div class="w-full flex justify-around items-end h-full">
+<div class="w-3 bg-primary rounded-t-full" style="height: 40%"></div>
+<div class="w-3 bg-primary rounded-t-full" style="height: 60%"></div>
+<div class="w-3 bg-primary rounded-t-full" style="height: 85%"></div>
+<div class="w-3 bg-primary rounded-t-full" style="height: 70%"></div>
+<div class="w-3 bg-primary rounded-t-full" style="height: 90%"></div>
+<div class="w-3 bg-primary rounded-t-full" style="height: 95%"></div>
+<div class="w-3 bg-primary rounded-t-full" style="height: 80%"></div>
+</div>
+<div class="absolute w-full flex justify-around items-center top-1/2 -translate-y-1/2 pointer-events-none">
+<!-- Curve simulation for pain -->
+<svg class="w-full h-24 stroke-tertiary fill-none stroke-[3] opacity-60" preserveaspectratio="none" viewbox="0 0 100 20">
+<path d="M0 5 Q 10 15, 20 8 T 40 12 T 60 4 T 80 18 T 100 10" stroke-linecap="round"></path>
+</svg>
+</div>
+</div>
+<div class="flex justify-between mt-4 px-4 text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest">
+<span>Semana 1</span>
+<span>Semana 2</span>
+<span>Semana 3</span>
+<span>Semana 4</span>
+</div>
+</section>
+</div>
+<!-- Right Column (30%) -->
+<div class="col-span-3 space-y-8">
+<!-- Profile Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl text-center">
+<div class="relative inline-block mb-4">
+<img alt="Patient photo" class="w-24 h-24 rounded-full object-cover mx-auto ring-4 ring-primary-container/10" data-alt="headshot of an elegant older woman with graying hair, smiling warmly, natural soft lighting, neutral clinical background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCirucvZ2-hRYpxbNr-QCwdVCINRfVgQYJv5P2i5H2XdsyQXwTDQVHM2C8FWCQU-6epxE5nYu8dd9p6-rXCHDLWPyRJlK6aWnbcDooDRpMjhMJAElHqnDfIryhPkoxNnS3VvH66BGR0t1UcXI4x3RWkXzKuxGGwu-u8BsYc1xHOjojuuSLseyn1nRbyIgnClZyMdTtaqrjC842SySOER6nHPJsWaBufymlsJA54s_cnA4xLdJ1jC3yQspS9cX5XhF7QsOU9NhdcQUk"/>
+<div class="absolute bottom-1 right-1 w-6 h-6 bg-secondary border-2 border-white rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[14px]" data-icon="check">check</span>
+</div>
+</div>
+<h4 class="text-xl font-bold text-on-surface leading-tight">Maria Aparecida</h4>
+<p class="text-xs text-on-surface-variant mt-1">Aparecida.souza@email.com</p>
+<p class="text-xs text-on-surface-variant">(19) 99822-1244</p>
+<div class="grid grid-cols-2 gap-2 mt-6 pt-6 border-t border-outline-variant/10">
+<div class="p-3 bg-surface-container-low rounded-xl">
+<p class="text-[10px] font-bold text-on-surface-variant/50 uppercase">Última Visita</p>
+<p class="text-xs font-bold mt-1">Ontem</p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-xl">
+<p class="text-[10px] font-bold text-on-surface-variant/50 uppercase">Frequência</p>
+<p class="text-xs font-bold mt-1">88%</p>
+</div>
+</div>
+</div>
+<!-- Fast Actions -->
+<div class="space-y-3">
+<p class="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-widest pl-2">Ações Rápidas</p>
+<button class="w-full flex items-center justify-between p-4 bg-primary text-white rounded-xl shadow-lg shadow-green-900/10 hover:brightness-110 transition-all active:scale-95 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="add_notes">add_notes</span>
+<span class="text-sm font-bold">Nova Prescrição</span>
+</div>
+<span class="material-symbols-outlined text-sm opacity-50 group-hover:opacity-100" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 bg-surface-container-lowest text-on-surface rounded-xl hover:bg-surface-container transition-all active:scale-95 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="edit_note">edit_note</span>
+<span class="text-sm font-bold">Adicionar Nota</span>
+</div>
+<span class="material-symbols-outlined text-sm opacity-30 group-hover:opacity-100" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 bg-surface-container-lowest text-on-surface rounded-xl hover:bg-surface-container transition-all active:scale-95 group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="description">description</span>
+<span class="text-sm font-bold">Exportar Prontuário</span>
+</div>
+<span class="material-symbols-outlined text-sm opacity-30 group-hover:opacity-100" data-icon="download">download</span>
+</button>
+</div>
+<!-- Recent Activity Timeline -->
+<div class="bg-surface-container-lowest p-6 rounded-xl">
+<h3 class="text-sm font-bold text-on-surface mb-6">Atividades Recentes</h3>
+<div class="space-y-6 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-outline-variant/30">
+<div class="relative pl-8">
+<div class="absolute left-0 top-0.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[8px]" data-icon="done" style="font-variation-settings: 'wght' 700;">done</span>
+</div>
+<p class="text-xs font-bold text-on-surface">Treino Concluído</p>
+<p class="text-[10px] text-on-surface-variant">Sessão de mobilidade às 14:30</p>
+<p class="text-[10px] mt-1 text-on-surface-variant/60">Há 2 horas</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-0.5 w-4 h-4 rounded-full bg-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[8px]" data-icon="edit" style="font-variation-settings: 'wght' 700;">edit</span>
+</div>
+<p class="text-xs font-bold text-on-surface">Plano Atualizado</p>
+<p class="text-[10px] text-on-surface-variant">Dra. Julia alterou a carga da isometria</p>
+<p class="text-[10px] mt-1 text-on-surface-variant/60">Ontem às 09:15</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-0.5 w-4 h-4 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[8px]" data-icon="medication" style="font-variation-settings: 'wght' 700;">medication</span>
+</div>
+<p class="text-xs font-bold text-on-surface">Medicação Registrada</p>
+<p class="text-[10px] text-on-surface-variant">Paciente confirmou uso de Celecoxibe</p>
+<p class="text-[10px] mt-1 text-on-surface-variant/60">Ontem às 08:00</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

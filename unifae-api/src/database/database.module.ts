@@ -1,0 +1,111 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import {
+  AppEntity,
+  AdminNoteEntity,
+  AuditLogEntity,
+  ClinicalCaseEntity,
+  CategoryTypeDefinitionEntity,
+  CategoryEntity,
+  ConsentTermEntity,
+  CourseEntity,
+  CourseMenuNodeEntity,
+  MenuNodeEntity,
+  NotificationEntity,
+  EventAttendanceEntity,
+  EventEntity,
+  ExerciseAttachmentEntity,
+  ExerciseCategoryEntity,
+  ExerciseEntity,
+  PatientConsentAcceptanceEntity,
+  PatientEntity,
+  PatientCareEpisodeEntity,
+  PatientExecutionEntity,
+  PatientAssessmentEntity,
+  PatientPainLogEntity,
+  MotivationalMessageEntity,
+  PrescriptionEntity,
+  PrescriptionItemEntity,
+  PrescriptionItemStepEntity,
+  CareLocationEntity,
+  CourseCareLocationEntity,
+  PatientAppointmentEntity,
+  UserDeviceEntity,
+  UserEntity,
+  UserSpecialtyEntity,
+  UserConsentAcceptanceEntity,
+  PasswordResetTokenEntity,
+} from './entities';
+
+const entities = [
+  AppEntity,
+  AdminNoteEntity,
+  CourseEntity,
+  CourseMenuNodeEntity,
+  MenuNodeEntity,
+  UserEntity,
+  UserSpecialtyEntity,
+  UserDeviceEntity,
+  PasswordResetTokenEntity,
+  ClinicalCaseEntity,
+  CategoryTypeDefinitionEntity,
+  CategoryEntity,
+  ExerciseEntity,
+  ExerciseAttachmentEntity,
+  ExerciseCategoryEntity,
+  PatientEntity,
+  PatientCareEpisodeEntity,
+  PatientAssessmentEntity,
+  PatientPainLogEntity,
+  PrescriptionEntity,
+  PrescriptionItemEntity,
+  PrescriptionItemStepEntity,
+  CareLocationEntity,
+  CourseCareLocationEntity,
+  PatientAppointmentEntity,
+  PatientExecutionEntity,
+  MotivationalMessageEntity,
+  ConsentTermEntity,
+  PatientConsentAcceptanceEntity,
+  UserConsentAcceptanceEntity,
+  AuditLogEntity,
+  NotificationEntity,
+  EventEntity,
+  EventAttendanceEntity,
+];
+
+@Module({
+  imports: [
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const db = config.get<{
+          host: string;
+          port: number;
+          username: string;
+          password: string;
+          name: string;
+          synchronize: boolean;
+        }>('database');
+        const nodeEnv = config.get<string>('nodeEnv') ?? 'development';
+        return {
+          type: 'mysql' as const,
+          host: db?.host ?? 'localhost',
+          port: db?.port ?? 3306,
+          username: db?.username ?? 'root',
+          password: db?.password ?? '',
+          database: db?.name ?? 'unifae_management',
+          entities,
+          synchronize: db?.synchronize ?? false,
+          // Evita poluir o terminal com queries; mantém apenas avisos/erros.
+          logging: nodeEnv === 'development' ? ['error', 'warn'] : ['error'],
+        };
+      },
+    }),
+    TypeOrmModule.forFeature(entities),
+  ],
+  exports: [TypeOrmModule],
+})
+export class DatabaseModule {}

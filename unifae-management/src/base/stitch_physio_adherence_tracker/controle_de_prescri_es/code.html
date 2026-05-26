@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Prescrições - UNIFAE Care</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#bfcaba",
+                    "secondary-container": "#c6e9be",
+                    "on-primary-fixed": "#002204",
+                    "on-secondary-fixed-variant": "#304e2e",
+                    "on-primary-container": "#cbffc2",
+                    "primary-container": "#2e7d32",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-high": "#e6e8e9",
+                    "surface-dim": "#d8dadb",
+                    "surface-bright": "#f8fafb",
+                    "on-tertiary-fixed-variant": "#7f2448",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#c9ecc1",
+                    "on-secondary-container": "#4c6a48",
+                    "error": "#ba1a1a",
+                    "outline": "#707a6c",
+                    "on-background": "#191c1d",
+                    "primary-fixed-dim": "#88d982",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#add0a6",
+                    "primary-fixed": "#a3f69c",
+                    "on-tertiary-fixed": "#3f001c",
+                    "on-tertiary-container": "#ffedf0",
+                    "on-primary-fixed-variant": "#005312",
+                    "tertiary-fixed-dim": "#ffb1c7",
+                    "tertiary-container": "#b14b6f",
+                    "surface-variant": "#e1e3e4",
+                    "on-surface": "#191c1d",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "inverse-primary": "#88d982",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-low": "#f2f4f5",
+                    "on-surface-variant": "#40493d",
+                    "primary": "#0d631b",
+                    "on-secondary-fixed": "#052106",
+                    "secondary": "#476644",
+                    "surface": "#f8fafb",
+                    "tertiary-fixed": "#ffd9e2",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#923357",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eceeef",
+                    "inverse-on-surface": "#eff1f2",
+                    "surface-tint": "#1b6d24",
+                    "background": "#f8fafb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; background-color: #f8fafb; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .sidebar-active { box-shadow: 0 12px 40px rgba(13, 99, 27, 0.15); }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 px-4 bg-slate-50 dark:bg-[#151819] h-screen w-64 border-r-0 z-50">
+<div class="mb-10 px-4">
+<h1 class="text-xl font-bold bg-gradient-to-r from-[#0d631b] to-[#2e7d32] bg-clip-text text-transparent">UNIFAE Care</h1>
+<p class="text-xs text-on-surface-variant tracking-wider uppercase font-semibold mt-1">Clinical Editorial</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">school</span> Cursos
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">group</span> Usuários
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">personal_injury</span> Pacientes
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">fitness_center</span> Exercícios
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">category</span> Categorias
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-white bg-gradient-to-r from-[#0d631b] to-[#2e7d32] rounded-full shadow-lg shadow-green-900/10 font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">medication</span> Prescrições
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">verified</span> Aprovações
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">assessment</span> Relatórios
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">receipt_long</span> Logs
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 font-['Manrope'] text-sm tracking-tight hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined">settings</span> Configurações
+            </a>
+</nav>
+<div class="mt-auto px-4 pt-4 border-t border-surface-container">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="professional portrait of a senior physician with gray hair wearing a white lab coat and stethoscope" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBX55UUewAPpdZHYZrdIJ90Sg6U0mK2lVumhgbl_7vck7rFXzuvuPjnGWgl8llLFLY9ZgUrtlNDOIXv6Jq0K0REzxURFNgEYZTY2sFENg_EzhSrztJiT-r-Z_vO5akVuHygHbIu2hioBJgDEHw2YmIkcRi83vhjj8YlCdYipjT6XYcswGN52FCliVrxFGjqCX7C23X3CRsCsZLnauswh0LgxJ3hoHhf6xaMeK3tgu6kqErE3fsqjx_5w93V_tKFfBuQlRT_avHHa1Q"/>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">Dr. Ricardo Silva</p>
+<p class="text-[10px] text-on-surface-variant truncate">Coordenador Clínico</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-40 bg-[#f8fafb]/80 dark:bg-[#191c1d]/80 backdrop-blur-xl">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-sm focus:ring-2 focus:ring-[#0d631b]/20 transition-all" placeholder="Buscar prescrições ou pacientes..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<button class="px-5 py-2 bg-white border border-outline-variant/30 text-[#0d631b] font-semibold text-sm rounded-full hover:bg-surface-container transition-all">
+                    Logout
+                </button>
+</div>
+</header>
+<!-- Page Content -->
+<div class="px-8 py-8 space-y-8">
+<!-- Page Header & Hero Stats -->
+<div class="flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="space-y-1">
+<h2 class="text-[2.75rem] font-extrabold tracking-tighter text-on-surface leading-tight">Prescrições</h2>
+<p class="text-on-surface-variant font-medium">Controle e aprovação de protocolos clínicos institucionais.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-lowest p-4 rounded-xl flex items-center gap-4 min-w-[180px]">
+<div class="w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">pending_actions</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Pendentes</p>
+<p class="text-2xl font-black text-on-surface">24</p>
+</div>
+</div>
+<div class="bg-primary text-white p-4 rounded-xl flex items-center gap-4 shadow-lg shadow-green-900/10 min-w-[180px]">
+<div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+<span class="material-symbols-outlined">add</span>
+</div>
+<div>
+<p class="text-xs font-bold text-white/70 uppercase tracking-wider">Nova</p>
+<p class="text-lg font-bold">Prescrição</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Filters Section -->
+<div class="bg-surface-container-low p-1 rounded-2xl flex flex-wrap items-center gap-2">
+<div class="flex-1 flex gap-2 p-2">
+<select class="bg-surface-container-lowest border-none rounded-xl text-sm font-semibold px-4 py-2.5 focus:ring-2 focus:ring-primary/20 text-on-surface-variant min-w-[140px]">
+<option>Status: Todos</option>
+<option>PENDING</option>
+<option>APPROVED</option>
+<option>REJECTED</option>
+</select>
+<select class="bg-surface-container-lowest border-none rounded-xl text-sm font-semibold px-4 py-2.5 focus:ring-2 focus:ring-primary/20 text-on-surface-variant min-w-[140px]">
+<option>Curso: Todos</option>
+<option>Fisioterapia</option>
+<option>Medicina</option>
+<option>Enfermagem</option>
+</select>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">calendar_today</span>
+<input class="bg-surface-container-lowest border-none rounded-xl text-sm font-semibold pl-9 pr-4 py-2.5 focus:ring-2 focus:ring-primary/20 text-on-surface-variant" placeholder="Filtrar por data" type="text"/>
+</div>
+</div>
+<div class="p-2 flex gap-2">
+<button class="p-2.5 rounded-xl hover:bg-white transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<button class="p-2.5 rounded-xl hover:bg-white transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Prescriptions Bento Table -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden">
+<table class="w-full text-left border-separate border-spacing-0">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant text-[11px] font-bold uppercase tracking-widest">
+<th class="px-8 py-4 first:rounded-tl-xl">Paciente</th>
+<th class="px-6 py-4">Responsável (Aluno/Prof)</th>
+<th class="px-6 py-4">Curso</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Data Emissão</th>
+<th class="px-8 py-4 last:rounded-tr-xl text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary-container font-bold text-xs">MA</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Maria Aparecida Souza</p>
+<p class="text-[10px] text-on-surface-variant">ID: #8829-1</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-0.5">
+<p class="text-sm font-semibold text-on-surface">Lucas G. Oliveira</p>
+<p class="text-[10px] text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">verified_user</span> Prof. Dra. Elenice M.
+                                    </p>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-surface-container rounded-full text-[10px] font-bold text-on-surface-variant">FISIOTERAPIA</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-[#fefce8] text-[#854d0e]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#eab308]"></span> PENDING
+                                </span>
+</td>
+<td class="px-6 py-5 text-sm font-medium text-on-surface-variant">
+                                24 Out, 2023
+                            </td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 rounded-lg hover:bg-primary-container/10 text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary-container font-bold text-xs">JP</div>
+<div>
+<p class="text-sm font-bold text-on-surface">João Pedro de Alcântara</p>
+<p class="text-[10px] text-on-surface-variant">ID: #9012-A</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-0.5">
+<p class="text-sm font-semibold text-on-surface">Beatriz Martins</p>
+<p class="text-[10px] text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">verified_user</span> Prof. Paulo Rossi
+                                    </p>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-surface-container rounded-full text-[10px] font-bold text-on-surface-variant">MEDICINA</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-[#f0fdf4] text-[#166534]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span> APPROVED
+                                </span>
+</td>
+<td class="px-6 py-5 text-sm font-medium text-on-surface-variant">
+                                23 Out, 2023
+                            </td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 rounded-lg hover:bg-primary-container/10 text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary-container font-bold text-xs">RC</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Roberto Carlos Oliveira</p>
+<p class="text-[10px] text-on-surface-variant">ID: #7741-X</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-0.5">
+<p class="text-sm font-semibold text-on-surface">Fernando Costa</p>
+<p class="text-[10px] text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">verified_user</span> Prof. Dra. Elenice M.
+                                    </p>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-surface-container rounded-full text-[10px] font-bold text-on-surface-variant">FISIOTERAPIA</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-[#fef2f2] text-[#991b1b]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#ef4444]"></span> REJECTED
+                                </span>
+</td>
+<td class="px-6 py-5 text-sm font-medium text-on-surface-variant">
+                                22 Out, 2023
+                            </td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 rounded-lg hover:bg-primary-container/10 text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary-container font-bold text-xs">SF</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Sandra Ferreira Lima</p>
+<p class="text-[10px] text-on-surface-variant">ID: #4432-P</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-0.5">
+<p class="text-sm font-semibold text-on-surface">Tiago Nunes</p>
+<p class="text-[10px] text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">verified_user</span> Prof. Paulo Rossi
+                                    </p>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-surface-container rounded-full text-[10px] font-bold text-on-surface-variant">ENFERMAGEM</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-[#fefce8] text-[#854d0e]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#eab308]"></span> PENDING
+                                </span>
+</td>
+<td class="px-6 py-5 text-sm font-medium text-on-surface-variant">
+                                22 Out, 2023
+                            </td>
+<td class="px-8 py-5 text-right">
+<button class="p-2 rounded-lg hover:bg-primary-container/10 text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="px-8 py-4 flex items-center justify-between border-t border-surface-container text-sm font-medium text-on-surface-variant bg-surface-container-low/30">
+<p>Exibindo 1-10 de 128 prescrições</p>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Contextual Quick Actions Bento -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10">
+<h3 class="text-lg font-bold mb-4">Próximas Revisões</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-all cursor-pointer">
+<img class="w-12 h-12 rounded-lg object-cover" data-alt="close up of doctor holding medical chart with pen in modern hospital clinical setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQADX3KFIR2JZhYDUJhpwj3qvhEdmSkCjMe0lEwjvAE0di63TMLthuTxusEgQVi9_3x0sg4nmmEGzdo0l-rrMXBLKeCSKXU6zJRUA6VHhRDQaC3C-FpZb26303tNFS8ltIJvQB1oMtFYKuSCGa7j6ZWCMyF_IUywA1D5_LR_yZJhquaHWbyA0qL1aI5wyZ1V4Ni70c86aiCI0CWmPbLLqxSUeXS29ced3D2JP3jH3MwVmPYUeaqusjQrG7KvKu8vX5vdZ4KXe-Mms"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Protocolo de Fisioterapia Respiratória</p>
+<p class="text-xs text-on-surface-variant">Aguardando validação do Prof. Dra. Elenice</p>
+</div>
+<span class="text-xs font-bold text-tertiary">URGENTE</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-all cursor-pointer">
+<img class="w-12 h-12 rounded-lg object-cover" data-alt="medical professional using stethoscope on patient in clean clinical environment with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBO5fzoMpQPYYE3bkNzk5iRSFfeoOK4DtNPeF2cvhVO4re0LMxvlNjfnJ4Uk_soPhkqb3eVmGMDp8xdtkjns0N-sLX7dS9aawKwR3h5ejseKf6iyohZ1QXZxamRSzVqmz5udUK2j3X4eGdJvgPhlOeCqYz7y2gBizvtKf33F1wpjZxGPOmUZGVibJvCW3_c9kuq2BLiShq-CjWZiy_16LOuCfOpLzMpMfKh0DFG3Xl2R56Imoi3BlkD4Xoaz-ijm1mh40TNuKFm64k"/>
+<div class="flex-1">
+<p class="text-sm font-bold">Prescrição Medicamentosa Cardíaca</p>
+<p class="text-xs text-on-surface-variant">Atualizado há 2 horas</p>
+</div>
+<span class="text-xs font-bold text-on-surface-variant">REVISAR</span>
+</div>
+</div>
+</div>
+<div class="bg-gradient-to-br from-[#0d631b] to-[#2e7d32] p-8 rounded-xl text-white shadow-xl shadow-green-900/10 flex flex-col justify-between">
+<div>
+<h3 class="text-xl font-bold mb-2">Relatório de Prescrições</h3>
+<p class="text-sm text-white/80 leading-relaxed">Gere um consolidado mensal de todas as prescrições aprovadas e rejeitadas por curso.</p>
+</div>
+<button class="mt-6 w-full py-3 bg-white text-primary font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-secondary-fixed transition-all active:scale-95">
+<span class="material-symbols-outlined">analytics</span>
+                        Gerar PDF Completo
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

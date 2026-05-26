@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#bfcaba",
+                    "secondary-container": "#c6e9be",
+                    "on-primary-fixed": "#002204",
+                    "on-secondary-fixed-variant": "#304e2e",
+                    "on-primary-container": "#cbffc2",
+                    "primary-container": "#2e7d32",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-high": "#e6e8e9",
+                    "surface-dim": "#d8dadb",
+                    "surface-bright": "#f8fafb",
+                    "on-tertiary-fixed-variant": "#7f2448",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#c9ecc1",
+                    "on-secondary-container": "#4c6a48",
+                    "error": "#ba1a1a",
+                    "outline": "#707a6c",
+                    "on-background": "#191c1d",
+                    "primary-fixed-dim": "#88d982",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#add0a6",
+                    "primary-fixed": "#a3f69c",
+                    "on-tertiary-fixed": "#3f001c",
+                    "on-tertiary-container": "#ffedf0",
+                    "on-primary-fixed-variant": "#005312",
+                    "tertiary-fixed-dim": "#ffb1c7",
+                    "tertiary-container": "#b14b6f",
+                    "surface-variant": "#e1e3e4",
+                    "on-surface": "#191c1d",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "inverse-primary": "#88d982",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-low": "#f2f4f5",
+                    "on-surface-variant": "#40493d",
+                    "primary": "#0d631b",
+                    "on-secondary-fixed": "#052106",
+                    "secondary": "#476644",
+                    "surface": "#f8fafb",
+                    "tertiary-fixed": "#ffd9e2",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#923357",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eceeef",
+                    "inverse-on-surface": "#eff1f2",
+                    "surface-tint": "#1b6d24",
+                    "background": "#f8fafb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-elevation {
+            box-shadow: 0 12px 40px rgba(25, 28, 29, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 px-4 h-screen w-64 border-r-0 bg-slate-50 dark:bg-[#151819] z-50">
+<div class="mb-10 px-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">health_and_safety</span>
+</div>
+<div>
+<h1 class="text-xl font-bold bg-gradient-to-r from-[#0d631b] to-[#2e7d32] bg-clip-text text-transparent">UNIFAE Care</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Clinical Editorial</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Item: Dashboard -->
+<a class="flex items-center gap-3 px-4 py-2 text-white bg-gradient-to-r from-[#0d631b] to-[#2e7d32] rounded-full shadow-lg shadow-green-900/10 scale-95 active:scale-90 transition-transform font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">school</span>
+<span>Cursos</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">group</span>
+<span>Usuários</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">personal_injury</span>
+<span>Pacientes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">fitness_center</span>
+<span>Exercícios</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">category</span>
+<span>Categorias</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">medication</span>
+<span>Prescrições</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">verified</span>
+<span>Aprovações</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span>Relatórios</span>
+</a>
+<div class="pt-4 mt-4 border-t border-outline-variant/10">
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Logs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#40493d] dark:text-slate-400 hover:bg-[#eceeef] dark:hover:bg-[#25292a] transition-colors rounded-full font-['Manrope'] text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Configurações</span>
+</a>
+</div>
+</nav>
+<div class="mt-auto p-4 bg-surface-container rounded-2xl flex items-center gap-3">
+<img alt="UNIFAE Institutional Logo" class="w-10 h-10 rounded-full object-cover" data-alt="portrait of a professional female doctor in white coat with stethoscope in a bright clinical setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbGZLAErOfr5CmY3eu70UG0KBsz3fVbuEJWhCMDjXlT_X3hypIx2d-YjRuoj0roV-Px6AcrQMLdrQ4zd2ZD-9TEHbdu_wAWd-8u3VtEbAULf18l2EWJPNktADQ1t2qJwAkPXwRKlbVzn2mrExGo6TUwPukm62JfzopSrzEQ62sQ9kzyFXXZdy0G-I_LCiDuCso8gO2-_RfB5lx4pkHnrasDSPDuFkreYtPLyfBm7vzux3YsdyeNq1Ul5Sxr0-DIbQpGucmvppcKUQ"/>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">Dr. Helena Souza</p>
+<p class="text-[10px] text-on-surface-variant">Admin Editorial</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-40 bg-[#f8fafb]/80 backdrop-blur-xl transition-all font-['Manrope'] headline-sm tracking-tight">
+<div class="flex items-center gap-6">
+<div class="relative group">
+<div class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">search</span>
+</div>
+<input class="bg-surface-container-high border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-[#0d631b]/20 w-64 transition-all outline-none" placeholder="Search data..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-6 w-[1px] bg-outline-variant opacity-20"></div>
+<button class="px-4 py-2 text-sm font-semibold text-primary hover:bg-primary-container/10 rounded-full transition-all">
+                    Logout
+                </button>
+</div>
+</header>
+<!-- Content Well -->
+<div class="p-8 bg-surface-container-low min-h-[calc(100vh-72px)]">
+<!-- Global Filters & Heading -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface mb-1">Painel Gerencial</h2>
+<p class="text-on-surface-variant text-sm">Monitoramento em tempo real do ecossistema clínico UNIFAE.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 bg-surface-container-lowest p-1 rounded-full tonal-elevation">
+<select class="bg-transparent border-none text-xs font-semibold py-1 px-4 focus:ring-0 cursor-pointer">
+<option>Todos os Cursos</option>
+<option>Fisioterapia</option>
+<option>Medicina</option>
+<option>Enfermagem</option>
+</select>
+<div class="w-[1px] h-4 bg-outline-variant opacity-20"></div>
+<select class="bg-transparent border-none text-xs font-semibold py-1 px-4 focus:ring-0 cursor-pointer">
+<option>Últimos 30 dias</option>
+<option>Últimos 7 dias</option>
+<option>Este Semestre</option>
+</select>
+</div>
+<button class="bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-green-900/10 active:scale-95 transition-transform flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">download</span>
+                        Exportar
+                    </button>
+</div>
+</div>
+<!-- Bento Grid - KPI Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl tonal-elevation group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center text-primary group-hover:bg-white/20 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">person_search</span>
+</div>
+<span class="text-[10px] font-bold text-primary bg-secondary-container px-2 py-1 rounded group-hover:bg-white/20 group-hover:text-white">+12.5%</span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1 group-hover:text-white/80">Total de pacientes</h3>
+<p class="text-2xl font-extrabold text-on-surface group-hover:text-white">1,284</p>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl tonal-elevation group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary group-hover:bg-white/20 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">exercise</span>
+</div>
+<span class="text-[10px] font-bold text-tertiary bg-tertiary-fixed px-2 py-1 rounded group-hover:bg-white/20 group-hover:text-white">84 Ativos</span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1 group-hover:text-white/80">Exercícios ativos</h3>
+<p class="text-2xl font-extrabold text-on-surface group-hover:text-white">432</p>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl tonal-elevation group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-error-container flex items-center justify-center text-error group-hover:bg-white/20 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<span class="text-[10px] font-bold text-error bg-error-container px-2 py-1 rounded group-hover:bg-white/20 group-hover:text-white">Urgente</span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1 group-hover:text-white/80">Prescrições pendentes</h3>
+<p class="text-2xl font-extrabold text-on-surface group-hover:text-white">28</p>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl tonal-elevation group hover:bg-primary transition-all duration-300">
+<div class="flex justify-between items-start mb-4">
+<div class="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center text-primary group-hover:bg-white/20 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<span class="text-[10px] font-bold text-primary bg-primary-fixed px-2 py-1 rounded group-hover:bg-white/20 group-hover:text-white">Meta: 90%</span>
+</div>
+<h3 class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1 group-hover:text-white/80">Taxa de adesão</h3>
+<p class="text-2xl font-extrabold text-on-surface group-hover:text-white">87.4%</p>
+</div>
+</div>
+<!-- Charts Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Evolution Line Chart Placeholder -->
+<div class="lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl tonal-elevation flex flex-col">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h4 class="text-lg font-bold text-on-surface">Evolução de Pacientes</h4>
+<p class="text-on-surface-variant text-xs">Crescimento da base de dados mensal</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold uppercase">2024</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-outline-variant"></span>
+<span class="text-[10px] font-bold uppercase">2023</span>
+</div>
+</div>
+</div>
+<div class="flex-1 min-h-[300px] flex items-end justify-between px-4 pb-4 border-l border-b border-outline-variant/10">
+<!-- Simplified Visualization of a Line Chart -->
+<div class="relative w-full h-full flex items-end justify-between">
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 100">
+<path class="text-primary opacity-50" d="M0,80 Q20,70 40,50 T80,20 T100,10" fill="none" stroke="currentColor" stroke-width="2"></path>
+<path class="text-outline-variant opacity-30" d="M0,90 Q20,85 40,75 T80,55 T100,45" fill="none" stroke="currentColor" stroke-width="2"></path>
+</svg>
+<div class="text-[10px] text-on-surface-variant/50 absolute bottom-[-24px] left-0">Jan</div>
+<div class="text-[10px] text-on-surface-variant/50 absolute bottom-[-24px] left-[25%]">Abr</div>
+<div class="text-[10px] text-on-surface-variant/50 absolute bottom-[-24px] left-[50%]">Jul</div>
+<div class="text-[10px] text-on-surface-variant/50 absolute bottom-[-24px] left-[75%]">Out</div>
+<div class="text-[10px] text-on-surface-variant/50 absolute bottom-[-24px] right-0">Dez</div>
+</div>
+</div>
+</div>
+<!-- Category Distribution Pizza Placeholder -->
+<div class="bg-surface-container-lowest p-8 rounded-xl tonal-elevation flex flex-col">
+<h4 class="text-lg font-bold text-on-surface mb-1">Distribuição</h4>
+<p class="text-on-surface-variant text-xs mb-8">Por categoria de tratamento</p>
+<div class="relative w-48 h-48 mx-auto mb-8">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#eceeef" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#0d631b" stroke-dasharray="45 55" stroke-dashoffset="0" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#476644" stroke-dasharray="30 70" stroke-dashoffset="-45" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#923357" stroke-dasharray="25 75" stroke-dashoffset="-75" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center flex-col">
+<span class="text-2xl font-black">1.2k</span>
+<span class="text-[8px] uppercase tracking-tighter text-on-surface-variant">Total Cases</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-xs text-on-surface-variant">Reabilitação</span>
+</div>
+<span class="text-xs font-bold">45%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-xs text-on-surface-variant">Ortopedia</span>
+</div>
+<span class="text-xs font-bold">30%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-xs text-on-surface-variant">Neurologia</span>
+</div>
+<span class="text-xs font-bold">25%</span>
+</div>
+</div>
+</div>
+<!-- Bar Chart Realized vs Prescribed -->
+<div class="lg:col-span-3 bg-surface-container-lowest p-8 rounded-xl tonal-elevation">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h4 class="text-lg font-bold text-on-surface">Exercícios: Realizados vs Prescritos</h4>
+<p class="text-on-surface-variant text-xs">Performance de adesão semanal</p>
+</div>
+</div>
+<div class="grid grid-cols-7 gap-4 h-64 items-end">
+<!-- Mon -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[80%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[72%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Seg</span>
+</div>
+<!-- Tue -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[90%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[85%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Ter</span>
+</div>
+<!-- Wed -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[85%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[80%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Qua</span>
+</div>
+<!-- Thu -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[100%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[95%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Qui</span>
+</div>
+<!-- Fri -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[70%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[68%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Sex</span>
+</div>
+<!-- Sat -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[40%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[20%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Sab</span>
+</div>
+<!-- Sun -->
+<div class="flex flex-col items-center gap-2 h-full justify-end group">
+<div class="flex gap-1 items-end h-full w-full justify-center">
+<div class="w-4 bg-primary/20 rounded-t-sm h-[30%]"></div>
+<div class="w-4 bg-primary rounded-t-sm h-[15%]"></div>
+</div>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold">Dom</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
