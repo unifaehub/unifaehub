@@ -5,6 +5,11 @@ import type { OAuth2Client } from 'google-auth-library';
 
 export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
 
+/** Required to read the connected account email on OAuth callback. */
+export const GOOGLE_USERINFO_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
+
+export const GOOGLE_OAUTH_SCOPES = [GOOGLE_CALENDAR_SCOPE, GOOGLE_USERINFO_EMAIL_SCOPE] as const;
+
 @Injectable()
 export class GoogleOAuthClientFactory {
   constructor(private readonly config: ConfigService) {}

@@ -4,7 +4,10 @@ import { google } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
 import { TokenCipherService } from '../../../shared/crypto/token-cipher.service';
 import { UserEntity } from '../../../database/entities/user.entity';
-import { GOOGLE_CALENDAR_SCOPE, GoogleOAuthClientFactory } from '../integrations/google-oauth-client.factory';
+import {
+  GOOGLE_OAUTH_SCOPES,
+  GoogleOAuthClientFactory,
+} from '../integrations/google-oauth-client.factory';
 import { GoogleOAuthTokenRepository } from '../repositories/google-oauth-token.repository';
 import { GoogleOAuthStateService } from './google-oauth-state.service';
 
@@ -60,7 +63,7 @@ export class GoogleOAuthService {
     const authUrl = client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
-      scope: [GOOGLE_CALENDAR_SCOPE],
+      scope: [...GOOGLE_OAUTH_SCOPES],
       state,
       include_granted_scopes: true,
     });
@@ -89,9 +92,8 @@ export class GoogleOAuthService {
     }
 
     client.setCredentials(tokens);
-    const oauth2 = google.oauth2({ version: 'v2', auth: client });
-    const profile = await oauth2.userinfo.get();
-    const googleEmail = profile.data.email;
+
+    const googleEmail = await this.resolveGoogleEmail(client);
     if (!googleEmail) {
       throw new BadRequestException('Unable to resolve Google account email.');
     }
@@ -102,7 +104,7 @@ export class GoogleOAuthService {
     await this.tokenRepository.saveCredential({
       googleEmail,
       encryptedRefreshToken,
-      scopes: GOOGLE_CALENDAR_SCOPE,
+      scopes: GOOGLE_OAUTH_SCOPES.join(' '),
       calendarId,
       connectedByUserId: userId,
       tokenExpiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
@@ -139,6 +141,17 @@ export class GoogleOAuthService {
     });
 
     return { client, calendarId: credential.calendarId };
+  }
+
+  private async resolveGoogleEmail(client: OAuth2Client): Promise<string | null> {
+    try {
+      const oauth2 = google.oauth2({ version: 'v2', auth: client });
+      const profile = await oauth2.userinfo.get();
+      return profile.data.email ?? null;
+    } catch (err) {
+      this.logger.warn(`userinfo.get failed: ${String(err)}`);
+      return null;
+    }
   }
 
   private assertOAuthConfigured(): void {
