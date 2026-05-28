@@ -35,4 +35,10 @@ export class LotteryController {
   getRooms(@Query('dataEvento') dataEvento: string) {
     return this.service.getRooms(dataEvento);
   }
+
+  @Get('rooms/status')
+  @Roles(...JORNADA_ADMIN_ROLES)
+  getRoomsWithStatus(@Query('dataEvento') dataEvento: string) {
+    return this.service.getRoomsWithStatus(dataEvento);
+  }
 }

@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
+import { EvaluationEntity } from '../../../database/entities/evaluation.entity';
+import { DynamicQuestionEntity } from '../../../database/entities/dynamic-question.entity';
+import { QuestionType } from '../../../database/entities/enums';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
 import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
 import { RoomProfessorEntity } from '../../../database/entities/room-professor.entity';
@@ -29,6 +32,10 @@ export class LotteryService {
     private readonly groups: Repository<WorkGroupEntity>,
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    @InjectRepository(EvaluationEntity)
+    private readonly evaluations: Repository<EvaluationEntity>,
+    @InjectRepository(DynamicQuestionEntity)
+    private readonly questions: Repository<DynamicQuestionEntity>,
     private readonly audit: AuditService,
   ) {}
 
@@ -149,6 +156,64 @@ export class LotteryService {
       where: { dataEvento },
       relations: ['trabalho', 'trabalho.aluno', 'professorLider', 'banca', 'banca.professor'],
       order: { id: 'ASC' },
+    });
+  }
+
+  async getRoomsWithStatus(dataEvento: string) {
+    const rooms = await this.getRooms(dataEvento);
+    if (!rooms.length) return [];
+
+    // Buscar todas as questões ativas
+    const allQuestions = await this.questions.find({ where: { ativo: true } });
+    const resumoQIds   = allQuestions.filter((q) => q.tipo === QuestionType.RESUMO).map((q) => q.id);
+    const apresQIds    = allQuestions.filter((q) => q.tipo === QuestionType.APRESENTACAO).map((q) => q.id);
+
+    // Buscar todas as avaliações para todos os trabalhos das salas
+    const trabalhoIds = rooms.map((r) => r.trabalhoId);
+    const evals = trabalhoIds.length
+      ? await this.evaluations.find({ where: { trabalhoId: In(trabalhoIds) } })
+      : [];
+
+    return rooms.map((room) => {
+      const banca    = room.banca ?? [];
+      const profIds  = banca.map((rp) => rp.professor.id);
+      const roomEvals = evals.filter((e) => e.trabalhoId === room.trabalhoId);
+
+      const evalStatus = (questionIds: number[]) => {
+        if (!questionIds.length) return { total: profIds.length, done: 0, pending: banca.map((rp) => rp.professor), overall: 'sem_perguntas' as const };
+        const profsDone = profIds.filter((pid) =>
+          questionIds.every((qid) => roomEvals.some((e) => e.professorId === pid && e.perguntaId === qid)),
+        );
+        const profsPending = banca
+          .filter((rp) => !profsDone.includes(rp.professor.id))
+          .map((rp) => ({ id: rp.professor.id, name: rp.professor.name }));
+
+        const overall =
+          profsDone.length === 0    ? 'nao_iniciado' :
+          profsDone.length < profIds.length ? 'parcial'       : 'completo';
+
+        return {
+          total:   profIds.length,
+          done:    profsDone.length,
+          pending: profsPending,
+          overall,
+        };
+      };
+
+      return {
+        ...room,
+        evaluationStatus: {
+          resumo:       evalStatus(resumoQIds),
+          apresentacao: evalStatus(apresQIds),
+          geral: (() => {
+            const r = evalStatus(resumoQIds).overall;
+            const a = evalStatus(apresQIds).overall;
+            if (r === 'completo' && a === 'completo') return 'completo';
+            if (r === 'nao_iniciado' && a === 'nao_iniciado') return 'nao_iniciado';
+            return 'parcial';
+          })(),
+        },
+      };
     });
   }
 

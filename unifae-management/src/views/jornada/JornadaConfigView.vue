@@ -57,15 +57,34 @@ function removeDate(d: string) {
 }
 
 async function clearConfig() {
-  const ok = await confirm.confirm({
-    message: 'Limpar todas as informações do evento (nome, local e datas)? Esta ação não exclui setores nem salas.',
-    tone: 'danger',
-  })
+  // 1. Buscar resumo do que será deletado
+  let summary = { rooms: 0, evaluations: 0, availabilities: 0, datas: [] as string[] }
+  try {
+    const { data } = await client.get('/evidence-journey/config/reset-summary')
+    summary = data
+  } catch { /* ignora, mostra aviso genérico */ }
+
+  const hasData = summary.rooms > 0 || summary.evaluations > 0
+
+  const confirmMsg = hasData
+    ? `⚠️ ATENÇÃO: Esta ação é irreversível e irá excluir:\n\n` +
+      `• ${summary.rooms} sala(s) criada(s)\n` +
+      `• ${summary.evaluations} avaliação(ões) registrada(s)\n` +
+      `• Disponibilidades dos professores nas datas: ${summary.datas.map((d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')).join(', ') || 'nenhuma'}\n\n` +
+      `Setores e salas físicas NÃO serão excluídos.\n\nConfirmar limpeza completa do evento?`
+    : 'Limpar as informações do evento (nome, local e datas)? Setores e salas físicas serão mantidos.'
+
+  const ok = await confirm.confirm({ message: confirmMsg, tone: 'danger' })
   if (!ok) return
-  config.value.eventoNome = null
-  config.value.eventoLocal = null
-  config.value.datasEvento = null
-  await saveConfig()
+
+  try {
+    await client.delete('/evidence-journey/config/reset')
+    await loadConfig()
+    await loadSectors()
+    toast.success('Evento limpo com sucesso.')
+  } catch {
+    toast.error('Erro ao limpar o evento.')
+  }
 }
 
 function formatDate(d: string) {

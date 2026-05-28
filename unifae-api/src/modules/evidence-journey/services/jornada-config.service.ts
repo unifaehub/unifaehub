@@ -1,9 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { JornadaConfigEntity } from '../../../database/entities/jornada-config.entity';
 import { PresentationSectorEntity } from '../../../database/entities/presentation-sector.entity';
 import { PresentationHallEntity } from '../../../database/entities/presentation-hall.entity';
+import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
+import { RoomProfessorEntity } from '../../../database/entities/room-professor.entity';
+import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.entity';
+import { EvaluationEntity } from '../../../database/entities/evaluation.entity';
+import { WorkGroupEntity } from '../../../database/entities/work-group.entity';
+import { ProfessorAvailabilityEntity } from '../../../database/entities/professor-availability.entity';
 
 class UpsertConfigDto {
   eventoNome?: string | null;
@@ -31,6 +37,18 @@ export class JornadaConfigService {
     private readonly sectors: Repository<PresentationSectorEntity>,
     @InjectRepository(PresentationHallEntity)
     private readonly halls: Repository<PresentationHallEntity>,
+    @InjectRepository(PresentationRoomEntity)
+    private readonly rooms: Repository<PresentationRoomEntity>,
+    @InjectRepository(RoomProfessorEntity)
+    private readonly roomProfessors: Repository<RoomProfessorEntity>,
+    @InjectRepository(RoomBestWorkEntity)
+    private readonly roomBestWorks: Repository<RoomBestWorkEntity>,
+    @InjectRepository(EvaluationEntity)
+    private readonly evaluations: Repository<EvaluationEntity>,
+    @InjectRepository(WorkGroupEntity)
+    private readonly workGroups: Repository<WorkGroupEntity>,
+    @InjectRepository(ProfessorAvailabilityEntity)
+    private readonly availabilities: Repository<ProfessorAvailabilityEntity>,
   ) {}
 
   // ── Config (singleton) ────────────────────────────────────────────────────
@@ -44,6 +62,68 @@ export class JornadaConfigService {
       cfg = await this.configs.save(cfg);
     }
     return cfg;
+  }
+
+  /** Retorna um resumo do que seria deletado ao resetar o evento. */
+  async getResetSummary() {
+    const cfg = await this.getConfig();
+    const datas = cfg.datasEvento ?? [];
+    const roomCount  = await this.rooms.count();
+    const avalCount  = await this.evaluations.count();
+    const availCount = datas.length
+      ? await this.availabilities.count({ where: { dataEvento: In(datas) } })
+      : 0;
+    return { rooms: roomCount, evaluations: avalCount, availabilities: availCount, datas };
+  }
+
+  /**
+   * Apaga todo o contexto do evento em cascata:
+   * avaliações → banca → melhores → grupos → salas → disponibilidades → config
+   */
+  async resetEvent() {
+    const cfg = await this.getConfig();
+    const datas = cfg.datasEvento ?? [];
+
+    // 1. Salas existentes
+    const allRooms = await this.rooms.find({ select: ['id', 'trabalhoId'] });
+    if (allRooms.length) {
+      const roomIds     = allRooms.map((r) => r.id);
+      const trabalhoIds = allRooms.map((r) => r.trabalhoId);
+
+      // 2. Avaliações (trabalho_id IN trabalhos das salas)
+      if (trabalhoIds.length) {
+        await this.evaluations.delete({ trabalhoId: In(trabalhoIds) });
+      }
+      // 3. Banca das salas
+      await this.roomProfessors.delete({ salaId: In(roomIds) });
+      // 4. Melhores trabalhos
+      await this.roomBestWorks.delete({ salaId: In(roomIds) });
+      // 5. Grupos de alunos
+      if (trabalhoIds.length) {
+        await this.workGroups.delete({ trabalhoId: In(trabalhoIds) });
+      }
+      // 6. Salas
+      await this.rooms.delete({ id: In(roomIds) });
+    }
+
+    // 7. Disponibilidades nas datas do evento
+    if (datas.length) {
+      await this.availabilities.delete({ dataEvento: In(datas) });
+    }
+
+    // 8. Limpar campos do config (mantém setores/salas físicas)
+    cfg.eventoNome  = null;
+    cfg.eventoLocal = null;
+    cfg.datasEvento = null;
+    await this.configs.save(cfg);
+
+    return {
+      ok: true,
+      deleted: {
+        rooms: allRooms.length,
+        availabilities: datas.length,
+      },
+    };
   }
 
   async updateConfig(dto: UpsertConfigDto): Promise<JornadaConfigEntity> {

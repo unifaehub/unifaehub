@@ -50,6 +50,7 @@ import { AuditModule } from '../audit/audit.module';
       JornadaConfigEntity,
       PresentationSectorEntity,
       PresentationHallEntity,
+      // JornadaConfigService uses these for cascade delete:
     ]),
     BullModule.registerQueue({ name: 'evidence-report' }),
     IdentityAccessModule,

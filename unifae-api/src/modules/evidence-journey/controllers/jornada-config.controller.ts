@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -35,6 +36,18 @@ export class JornadaConfigController {
   @Roles(...JORNADA_WRITE_ROLES)
   updateConfig(@Body() body: { eventoNome?: string; eventoLocal?: string; datasEvento?: string[] }) {
     return this.service.updateConfig(body);
+  }
+
+  @Get('reset-summary')
+  @Roles(...JORNADA_WRITE_ROLES)
+  getResetSummary() {
+    return this.service.getResetSummary();
+  }
+
+  @Delete('reset')
+  @Roles(...JORNADA_WRITE_ROLES)
+  resetEvent() {
+    return this.service.resetEvent();
   }
 
   // ── Sectors ───────────────────────────────────────────────────────────────
