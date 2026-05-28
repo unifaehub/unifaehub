@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { ProfessorAvailabilityEntity } from '../../../database/entities/professor-availability.entity';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { UserRole } from '../../../database/entities/enums';
@@ -16,7 +16,7 @@ export class ProfessorAvailabilityService {
 
   async listProfessors() {
     return this.users.find({
-      where: { role: UserRole.PROFESSOR, deletedAt: null },
+      where: { role: UserRole.PROFESSOR, deletedAt: IsNull() },
       order: { name: 'ASC' },
       select: ['id', 'name', 'email', 'registroFuncional', 'cursoBase'],
     });

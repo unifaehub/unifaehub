@@ -37,9 +37,12 @@ if (!existsSync(apiEnv) && existsSync(apiExample)) {
   console.warn('[ensure] Sem .env.example na API — configure unifae-api/.env manualmente.')
 }
 
+const mobileDir = join(root, 'unifae-app-jorney-evidence')
+
 for (const { dir, name } of [
-  { dir: apiDir, name: 'unifae-api' },
-  { dir: webDir, name: 'unifae-management' },
+  { dir: apiDir,    name: 'unifae-api' },
+  { dir: webDir,    name: 'unifae-management' },
+  { dir: mobileDir, name: 'unifae-app-jorney-evidence' },
 ]) {
   const nm = join(dir, 'node_modules')
   if (!existsSync(nm)) {

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
 import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
 import { RoomProfessorEntity } from '../../../database/entities/room-professor.entity';
@@ -42,14 +42,15 @@ export class LotteryService {
     const existingRooms = await this.rooms.find({ where: { dataEvento } });
     if (existingRooms.length > 0) {
       const roomIds = existingRooms.map((r) => r.id);
-      await this.roomProfessors.delete({ salaId: roomIds as unknown as number });
+      const trabalhoIds = existingRooms.map((r) => r.trabalhoId);
+      await this.roomProfessors.delete({ salaId: In(roomIds) as any });
+      await this.groups.delete({ trabalhoId: In(trabalhoIds) as any });
       await this.rooms.delete({ dataEvento });
-      await this.groups.delete({ trabalho: { presentationRooms: { dataEvento } } });
     }
 
     // 2. Trabalhos aprovados
     const approvedWorks = await this.works.find({
-      where: { status: EvidenceWorkStatus.APROVADO, deletedAt: null },
+      where: { status: EvidenceWorkStatus.APROVADO, deletedAt: IsNull() },
       relations: ['aluno'],
     });
     if (approvedWorks.length === 0) {

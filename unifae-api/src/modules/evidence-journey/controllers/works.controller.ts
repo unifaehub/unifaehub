@@ -16,13 +16,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { CurrentUser } from '../../identity-access/decorators/current-user.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { WorksService } from '../services/works.service';
 import { CreateWorkDto } from '../dto/create-work.dto';
 import { ModerateWorksDto } from '../dto/moderate-works.dto';
+
+type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: string; size: number };
 
 @ApiTags('Jornada — Trabalhos')
 @ApiBearerAuth()
@@ -50,7 +52,7 @@ export class WorksController {
   create(
     @Body() dto: CreateWorkDto,
     @CurrentUser() user: UserEntity,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: UploadedMulterFile,
   ) {
     return this.service.create(dto, user, file);
   }
@@ -62,7 +64,7 @@ export class WorksController {
   resubmit(
     @Body() dto: CreateWorkDto,
     @CurrentUser() user: UserEntity,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: UploadedMulterFile,
   ) {
     return this.service.resubmit(user.id, dto, file);
   }

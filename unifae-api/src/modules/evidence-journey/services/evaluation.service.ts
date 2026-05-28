@@ -75,19 +75,18 @@ export class EvaluationService {
 
     // Ausente/Indeferido: salvar apenas status sem notas
     if (dto.statusApresentacao !== PresentationStatus.PRESENTE) {
-      const row = this.evaluations.create({
-        trabalhoId,
-        professorId,
-        perguntaId: null,
-        nota: null,
-        statusApresentacao: dto.statusApresentacao,
-      });
-      // Use QueryBuilder insert to bypass @BeforeUpdate hook (this is an insert)
+      // Usar plain object para evitar conflito de tipos com relações no .values()
       await this.evaluations
         .createQueryBuilder()
         .insert()
         .into(EvaluationEntity)
-        .values(row)
+        .values({
+          trabalhoId,
+          professorId,
+          perguntaId: null as unknown as number,
+          nota: null as unknown as number,
+          statusApresentacao: dto.statusApresentacao,
+        } as any)
         .execute();
       return { saved: 1 };
     }
@@ -97,22 +96,20 @@ export class EvaluationService {
       throw new BadRequestException('Respostas são obrigatórias para status Presente.');
     }
 
-    const rows = dto.respostas.map((r) =>
-      this.evaluations.create({
-        trabalhoId,
-        professorId,
-        perguntaId: r.perguntaId,
-        nota: r.nota ?? null,
-        comentario: r.comentario ?? null,
-        statusApresentacao: PresentationStatus.PRESENTE,
-      }),
-    );
+    const rows = dto.respostas.map((r) => ({
+      trabalhoId,
+      professorId,
+      perguntaId: r.perguntaId,
+      nota: r.nota ?? null,
+      comentario: r.comentario ?? null,
+      statusApresentacao: PresentationStatus.PRESENTE,
+    }));
 
     await this.evaluations
       .createQueryBuilder()
       .insert()
       .into(EvaluationEntity)
-      .values(rows)
+      .values(rows as any)
       .execute();
 
     return { saved: rows.length };

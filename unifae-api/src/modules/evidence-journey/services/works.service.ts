@@ -15,6 +15,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 
+type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: string; size: number };
+
 @Injectable()
 export class WorksService {
   constructor(
@@ -64,7 +66,7 @@ export class WorksService {
   async create(
     dto: CreateWorkDto,
     currentUser: UserEntity,
-    file?: Express.Multer.File,
+    file?: UploadedMulterFile,
   ): Promise<EvidenceWorkEntity> {
     const alunoId = dto.alunoId ?? currentUser.id;
     const arquivoUrl = file ? this.saveFile(file, alunoId) : null;
@@ -83,7 +85,7 @@ export class WorksService {
   async resubmit(
     alunoId: number,
     dto: CreateWorkDto,
-    file?: Express.Multer.File,
+    file?: UploadedMulterFile,
   ): Promise<EvidenceWorkEntity> {
     const existingActive = await this.works.findOne({
       where: { alunoId, deletedAt: IsNull() },
@@ -127,7 +129,7 @@ export class WorksService {
     await this.works.save(work);
   }
 
-  private saveFile(file: Express.Multer.File, alunoId: number): string {
+  private saveFile(file: UploadedMulterFile, alunoId: number): string {
     const uploadRoot =
       this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
     const dir = path.join(uploadRoot, 'evidence-works', String(alunoId));

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
 import { parsePageLimit, toPaginated } from '../../../common/pagination';
 
@@ -51,7 +51,7 @@ export class RankingService {
     if (workIds.length === 0) return toPaginated([], total, page, limit);
 
     const worksMap = new Map<number, EvidenceWorkEntity>();
-    const workEntities = await this.works.findByIds(workIds, { relations: ['aluno'] });
+    const workEntities = await this.works.find({ where: { id: In(workIds) }, relations: ['aluno'] });
     workEntities.forEach((w) => worksMap.set(w.id, w));
 
     const data: RankingRow[] = raw.map((r) => {

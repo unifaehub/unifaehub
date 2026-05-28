@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { CurrentUser } from '../../identity-access/decorators/current-user.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
@@ -10,7 +10,7 @@ import { LotteryService } from '../services/lottery.service';
 import { RunLotteryDto } from '../dto/run-lottery.dto';
 import { getRequestContext } from '../../../common/http/request-context';
 import { Req } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 
 @ApiTags('Jornada — Sorteio')
 @ApiBearerAuth()
