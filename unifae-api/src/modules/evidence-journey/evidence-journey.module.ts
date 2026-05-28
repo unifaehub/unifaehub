@@ -27,6 +27,7 @@ import { QuestionsController } from './controllers/questions.controller';
 import { ProfessorAvailabilityController } from './controllers/professor-availability.controller';
 import { ReportProcessor } from './processors/report.processor';
 import { IdentityAccessModule } from '../identity-access/identity-access.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { IdentityAccessModule } from '../identity-access/identity-access.module'
     ]),
     BullModule.registerQueue({ name: 'evidence-report' }),
     IdentityAccessModule,
+    AuditModule,
   ],
   controllers: [
     WorksController,
