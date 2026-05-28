@@ -226,7 +226,15 @@ export class AuthService {
         );
       }
     } else if (dto.accessMode === LoginAccessMode.JORNADA) {
-      if (user.role !== UserRole.PROFESSOR && user.role !== UserRole.STUDENT && user.role !== UserRole.ADMIN) {
+      const jornadaRoles = [
+        UserRole.MASTER,
+        UserRole.ADMIN,
+        UserRole.ADMIN_JORNADA,
+        UserRole.PROFESSOR,
+        UserRole.STUDENT,
+      ];
+      const allRoles = [user.role, ...(user.extraRoles ?? [])];
+      if (!allRoles.some((r) => jornadaRoles.includes(r as UserRole))) {
         throw new UnauthorizedException('Acesso à Jornada restrito a professores, alunos e administradores.');
       }
     } else {
