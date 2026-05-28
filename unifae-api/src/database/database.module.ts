@@ -47,6 +47,9 @@ import {
   DynamicQuestionEntity,
   EvaluationEntity,
   KeywordEntity,
+  JornadaConfigEntity,
+  PresentationSectorEntity,
+  PresentationHallEntity,
 } from './entities';
 
 const entities = [
@@ -94,6 +97,9 @@ const entities = [
   DynamicQuestionEntity,
   EvaluationEntity,
   KeywordEntity,
+  JornadaConfigEntity,
+  PresentationSectorEntity,
+  PresentationHallEntity,
 ];
 
 @Module({
