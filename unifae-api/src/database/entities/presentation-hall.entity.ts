@@ -1,8 +1,8 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PresentationSectorEntity } from './presentation-sector.entity';
 
+// Nota: índice em setor_id é criado automaticamente pelo MySQL via FK constraint.
 @Entity('presentation_halls')
-@Index(['setorId'])
 export class PresentationHallEntity {
   @PrimaryGeneratedColumn()
   id: number;

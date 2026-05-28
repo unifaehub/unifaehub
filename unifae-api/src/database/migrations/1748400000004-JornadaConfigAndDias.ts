@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, TableColumn, Table, TableForeignKey, TableIndex } from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn, Table, TableForeignKey } from 'typeorm';
 
 export class JornadaConfigAndDias1748400000004 implements MigrationInterface {
   name = 'JornadaConfigAndDias1748400000004';
@@ -50,6 +50,8 @@ export class JornadaConfigAndDias1748400000004 implements MigrationInterface {
     }
 
     // presentation_halls table
+    // Nota: NÃO criar índice explícito em setor_id — o MySQL cria automaticamente
+    // ao adicionar a FK constraint, e tentar recriar causaria erro.
     const hasHalls = await queryRunner.hasTable('presentation_halls');
     if (!hasHalls) {
       await queryRunner.createTable(
@@ -76,11 +78,7 @@ export class JornadaConfigAndDias1748400000004 implements MigrationInterface {
           onDelete: 'CASCADE',
         }),
       );
-
-      await queryRunner.createIndex(
-        'presentation_halls',
-        new TableIndex({ name: 'IDX_halls_setor_id', columnNames: ['setor_id'] }),
-      );
+      // Índice em setor_id é criado automaticamente pelo MySQL junto com a FK acima.
     }
   }
 
