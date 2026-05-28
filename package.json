@@ -12,7 +12,9 @@
     "seed:full": "npm run seed:full --prefix unifae-api",
     "dev:api": "npm run start:dev --prefix unifae-api",
     "dev:web": "npm run dev --prefix unifae-management",
-    "dev:mobile": "npm run start --prefix unifae-app-jorney-evidence",
+    "dev:mobile": "npm run start:lan --prefix unifae-app-jorney-evidence",
+    "dev:mobile:tunnel": "npm run start:tunnel --prefix unifae-app-jorney-evidence",
+    "dev:tunnel": "node scripts/dev.mjs --tunnel",
     "build:api": "npm run build --prefix unifae-api",
     "build:web": "npm run build --prefix unifae-management"
   },

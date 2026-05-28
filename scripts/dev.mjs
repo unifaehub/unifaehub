@@ -13,6 +13,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+// npm run dev          → usa modo LAN (padrão, mesmo Wi-Fi)
+// npm run dev:tunnel   → usa modo Tunnel (celular fora da LAN / rede externa)
+const useTunnel = process.argv.includes('--tunnel') || process.env.EXPO_TUNNEL === '1';
+const mobileScript = useTunnel ? 'start:tunnel' : 'start:lan';
+
 const SERVICES = [
   {
     title: 'UNIFAE — API',
@@ -24,7 +29,7 @@ const SERVICES = [
   },
   {
     title: 'UNIFAE — Mobile',
-    cmd:   'npm run start --prefix unifae-app-jorney-evidence',
+    cmd:   `npm run ${mobileScript} --prefix unifae-app-jorney-evidence`,
   },
   {
     title: 'UNIFAE — GitSync',
