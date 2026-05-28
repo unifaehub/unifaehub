@@ -17,7 +17,7 @@ import { PresentationStatus } from '../../../database/entities/enums';
 import { SubmitEvaluationDto } from '../dto/submit-evaluation.dto';
 import { CloseRoomDto } from '../dto/close-room.dto';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import type { Queue } from 'bull';
 
 @Injectable()
 export class EvaluationService {

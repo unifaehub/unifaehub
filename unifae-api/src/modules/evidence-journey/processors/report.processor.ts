@@ -1,7 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Job } from 'bull';
+import type { Job } from 'bull';
 import { Repository } from 'typeorm';
 import { EvaluationEntity } from '../../../database/entities/evaluation.entity';
 import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
