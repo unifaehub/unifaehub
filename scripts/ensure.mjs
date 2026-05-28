@@ -1,26 +1,43 @@
 /**
  * Garante ambiente pronto para `npm run dev`:
  * - copia `unifae-api/.env` a partir de `.env.example` se ainda não existir;
- * - executa `npm install` em `unifae-api` e `unifae-management` apenas se não houver `node_modules`.
+ * - executa `npm install` em todos os sub-projetos quando package.json foi
+ *   modificado após o último install (detectado via .install-stamp em node_modules).
  */
-import { copyFileSync, existsSync, writeFileSync, chmodSync } from 'node:fs'
+import { copyFileSync, existsSync, writeFileSync, chmodSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
+/**
+ * Retorna true se node_modules não existe OU se package.json foi modificado
+ * depois do último `npm install` (comparando com o arquivo sentinela .install-stamp).
+ */
+function needsInstall(dir) {
+  const nm    = join(dir, 'node_modules')
+  const stamp = join(nm, '.install-stamp')
+  const pkg   = join(dir, 'package.json')
+  if (!existsSync(nm))    return true
+  if (!existsSync(stamp)) return true
+  return statSync(pkg).mtimeMs > statSync(stamp).mtimeMs
+}
+
+function install(dir, name) {
+  console.log(`[ensure] package.json alterado — instalando dependências em ${name}…`)
+  const r = spawnSync('npm', ['install'], { cwd: dir, stdio: 'inherit', shell: true })
+  if (r.status !== 0) process.exit(r.status ?? 1)
+  // Grava sentinela para evitar reinstall desnecessário na próxima execução
+  writeFileSync(join(dir, 'node_modules', '.install-stamp'), new Date().toISOString())
+  console.log(`[ensure] ${name}: dependências atualizadas.`)
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 
-if (!existsSync(join(root, 'node_modules'))) {
-  console.log('[ensure] Instalando dependências na raiz (concurrently)…')
-  const rootInstall = spawnSync('npm', ['install'], {
-    cwd: root,
-    stdio: 'inherit',
-    shell: true,
-  })
-  if (rootInstall.status !== 0) {
-    process.exit(rootInstall.status ?? 1)
-  }
+if (needsInstall(root)) {
+  install(root, 'root (concurrently)')
+} else {
+  console.log('[ensure] root: node_modules OK')
 }
 
 const apiDir = join(root, 'unifae-api')
@@ -44,17 +61,8 @@ for (const { dir, name } of [
   { dir: webDir,    name: 'unifae-management' },
   { dir: mobileDir, name: 'unifae-app-jorney-evidence' },
 ]) {
-  const nm = join(dir, 'node_modules')
-  if (!existsSync(nm)) {
-    console.log(`[ensure] Instalando dependências em ${name}…`)
-    const r = spawnSync('npm', ['install'], {
-      cwd: dir,
-      stdio: 'inherit',
-      shell: true,
-    })
-    if (r.status !== 0) {
-      process.exit(r.status ?? 1)
-    }
+  if (needsInstall(dir)) {
+    install(dir, name)
   } else {
     console.log(`[ensure] ${name}: node_modules OK`)
   }
