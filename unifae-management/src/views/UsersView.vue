@@ -327,6 +327,7 @@ function openEdit(u: UserRow) {
   if (editPhotoInput.value) editPhotoInput.value.value = ''
   editPeriodError.value = null
   showEdit.value = true
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function closeEdit() {

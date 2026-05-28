@@ -13,6 +13,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../identity-access/decorators/current-user.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../database/entities/enums';
+import { JORNADA_READ_ROLES } from '../../../common/guards/jornada-roles';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { EvaluationService } from '../services/evaluation.service';
 import { SubmitEvaluationDto } from '../dto/submit-evaluation.dto';
@@ -26,13 +27,13 @@ export class EvaluationController {
   constructor(private readonly service: EvaluationService) {}
 
   @Get('my-rooms')
-  @Roles(UserRole.PROFESSOR)
+  @Roles(...JORNADA_READ_ROLES)
   getMyRooms(@CurrentUser() user: UserEntity) {
     return this.service.getMyRooms(user.id);
   }
 
   @Get('questions')
-  @Roles(UserRole.PROFESSOR)
+  @Roles(...JORNADA_READ_ROLES)
   getQuestions() {
     return this.service.getQuestions();
   }

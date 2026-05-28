@@ -3,9 +3,12 @@ import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiRequest } from '@/composables/useApiRequest'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+
+const router = useRouter()
 
 type KeywordRow = { id: number; palavra: string; dataAgendamento: string; horaInicio: string }
 
@@ -56,6 +59,7 @@ async function remove(id: number) {
 
 <template>
   <div class="keyword-view">
+    <button class="btn-back" @click="router.push({ name: 'jornada-dashboard' })">← Voltar à Jornada</button>
     <h2 class="keyword-view__title">Agendamento de Palavras-Chave</h2>
     <p class="keyword-view__desc">A palavra-chave atual é exibida no app mobile dos professores ao pressionar "Atualizar".</p>
 
@@ -98,6 +102,8 @@ async function remove(id: number) {
 </template>
 
 <style scoped>
+.btn-back { background: none; border: none; cursor: pointer; color: var(--color-primary, #0d631b); font-size: .85rem; font-weight: 600; padding: 0; margin-bottom: 1rem; display: inline-block; }
+.btn-back:hover { text-decoration: underline; }
 .keyword-view { padding: 1.5rem; }
 .keyword-view__title { font-size: 1.4rem; font-weight: 700; margin: 0 0 .35rem; }
 .keyword-view__desc { color: #6b7280; font-size: .9rem; margin: 0 0 1.5rem; }

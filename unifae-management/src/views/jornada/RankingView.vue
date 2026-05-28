@@ -4,8 +4,11 @@ import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiRequest } from '@/composables/useApiRequest'
 import type { Paged } from '@/types/pagination'
+
+const router = useRouter()
 
 type RankingRow = {
   trabalhoId: number
@@ -28,6 +31,7 @@ watch([page, limit], execute, { immediate: true })
 
 <template>
   <div class="ranking-view">
+    <button class="btn-back" @click="router.push({ name: 'jornada-dashboard' })">← Voltar à Jornada</button>
     <h2 class="ranking-view__title">Ranking Final — Jornada de Evidências</h2>
     <p class="ranking-view__formula">
       Score = (Melhor da Sala × 5) + (Média Apresentação × 2) + (Média Resumo × 1)
@@ -75,6 +79,8 @@ watch([page, limit], execute, { immediate: true })
 </template>
 
 <style scoped>
+.btn-back { background: none; border: none; cursor: pointer; color: var(--color-primary, #0d631b); font-size: .85rem; font-weight: 600; padding: 0; margin-bottom: 1rem; display: inline-block; }
+.btn-back:hover { text-decoration: underline; }
 .ranking-view { padding: 1.5rem; }
 .ranking-view__title { font-size: 1.4rem; font-weight: 700; margin: 0 0 .35rem; }
 .ranking-view__formula { font-size: .82rem; color: #6b7280; background: #f3f4f6; padding: .5rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-family: monospace; }

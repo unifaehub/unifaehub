@@ -21,7 +21,7 @@ function shouldTrackRouteLoading(
   return true
 }
 
-type Role = 'ADMIN' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'
+type Role = 'MASTER' | 'ADMIN' | 'ADMIN_JORNADA' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'
 
 const COURSE_HUB_ROLES = ['ADMIN', 'COORDINATOR', 'PROFESSOR', 'STUDENT'] satisfies Role[]
 const COORD_ONLY_ROLES = ['ADMIN', 'COORDINATOR'] satisfies Role[]
@@ -302,6 +302,12 @@ const router = createRouter({
           component: () => import('@/views/jornada/RankingView.vue'),
           meta: { searchPlaceholder: 'Ranking de trabalhos…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
         },
+        {
+          path: 'jornada/configuracoes',
+          name: 'jornada-config',
+          component: () => import('@/views/jornada/JornadaConfigView.vue'),
+          meta: { searchPlaceholder: 'Configurações da Jornada…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
       ],
     },
   ],
@@ -331,8 +337,11 @@ router.beforeEach(async (to, from) => {
   }
 
   const roles = to.meta.roles as Role[] | undefined
-  if (roles && auth.user && !roles.includes(auth.user.role as Role)) {
-    return { name: 'dashboard' }
+  if (roles && auth.user) {
+    const allRoles = [auth.user.role as Role, ...((auth.user.extraRoles ?? []) as Role[])]
+    if (!allRoles.some((r) => roles.includes(r))) {
+      return { name: 'dashboard' }
+    }
   }
 
   const courseIdRaw = to.params.courseId

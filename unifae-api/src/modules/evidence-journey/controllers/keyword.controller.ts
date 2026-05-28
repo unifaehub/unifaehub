@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../database/entities/enums';
+import { JORNADA_ADMIN_ROLES, JORNADA_READ_ROLES, JORNADA_WRITE_ROLES } from '../../../common/guards/jornada-roles';
 import { KeywordService } from '../services/keyword.service';
 import { CreateKeywordDto } from '../dto/create-keyword.dto';
 
@@ -24,25 +25,25 @@ export class KeywordController {
   constructor(private readonly service: KeywordService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   list() {
     return this.service.list();
   }
 
   @Get('current')
-  @Roles(UserRole.PROFESSOR, UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_READ_ROLES)
   getCurrent() {
     return this.service.getCurrentKeyword();
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   create(@Body() dto: CreateKeywordDto) {
     return this.service.create(dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(...JORNADA_WRITE_ROLES)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }

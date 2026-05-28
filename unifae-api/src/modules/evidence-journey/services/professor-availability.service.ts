@@ -18,8 +18,18 @@ export class ProfessorAvailabilityService {
     return this.users.find({
       where: { role: UserRole.PROFESSOR, deletedAt: IsNull() },
       order: { name: 'ASC' },
-      select: ['id', 'name', 'email', 'registroFuncional', 'cursoBase'],
+      select: ['id', 'name', 'email', 'registroFuncional', 'cursoBase', 'diasSemana'],
     });
+  }
+
+  async setSchedule(professorId: number, diasSemana: string[] | null) {
+    const professor = await this.users.findOne({
+      where: { id: professorId, role: UserRole.PROFESSOR },
+    });
+    if (!professor) throw new Error('Professor não encontrado.');
+    professor.diasSemana = diasSemana?.length ? diasSemana : null;
+    await this.users.save(professor);
+    return { id: professorId, diasSemana: professor.diasSemana };
   }
 
   async getAvailabilities(dataEvento?: string) {

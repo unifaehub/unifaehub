@@ -3,9 +3,12 @@ import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiRequest } from '@/composables/useApiRequest'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+
+const router = useRouter()
 
 type Question = {
   id: number
@@ -81,6 +84,7 @@ async function remove(id: number) {
 
 <template>
   <div class="questions-view">
+    <button class="btn-back" @click="router.push({ name: 'jornada-dashboard' })">← Voltar à Jornada</button>
     <div class="questions-view__header">
       <h2 class="questions-view__title">Perguntas Dinâmicas</h2>
       <button class="btn btn--primary" @click="openCreate">+ Nova Pergunta</button>
@@ -142,6 +146,8 @@ async function remove(id: number) {
 </template>
 
 <style scoped>
+.btn-back { background: none; border: none; cursor: pointer; color: var(--color-primary, #0d631b); font-size: .85rem; font-weight: 600; padding: 0; margin-bottom: 1rem; display: inline-block; }
+.btn-back:hover { text-decoration: underline; }
 .questions-view { padding: 1.5rem; }
 .questions-view__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
 .questions-view__title { font-size: 1.4rem; font-weight: 700; margin: 0; }

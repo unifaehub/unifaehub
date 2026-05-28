@@ -13,6 +13,51 @@ type Professor = {
   email: string
   registroFuncional: string | null
   cursoBase: string | null
+  diasSemana: string[] | null
+}
+
+const DIAS = [
+  { value: '1', label: 'Seg' },
+  { value: '2', label: 'Ter' },
+  { value: '3', label: 'Qua' },
+  { value: '4', label: 'Qui' },
+  { value: '5', label: 'Sex' },
+]
+
+const editingSchedule = ref<{ id: number; dias: string[] } | null>(null)
+const savingSchedule = ref(false)
+
+function openSchedule(p: Professor) {
+  editingSchedule.value = { id: p.id, dias: [...(p.diasSemana ?? [])] }
+}
+
+function toggleDia(dia: string) {
+  if (!editingSchedule.value) return
+  const idx = editingSchedule.value.dias.indexOf(dia)
+  if (idx >= 0) editingSchedule.value.dias.splice(idx, 1)
+  else editingSchedule.value.dias.push(dia)
+}
+
+async function saveSchedule() {
+  if (!editingSchedule.value) return
+  savingSchedule.value = true
+  try {
+    await client.patch(`/evidence-journey/professors/${editingSchedule.value.id}/schedule`, {
+      diasSemana: editingSchedule.value.dias,
+    })
+    toast.success('Disponibilidade semanal salva.')
+    editingSchedule.value = null
+    reloadProfs()
+  } catch {
+    toast.error('Erro ao salvar.')
+  } finally {
+    savingSchedule.value = false
+  }
+}
+
+function diasLabel(dias: string[] | null) {
+  if (!dias?.length) return '—'
+  return dias.sort().map((d) => DIAS.find((x) => x.value === d)?.label ?? d).join(', ')
 }
 
 type Availability = {
@@ -81,6 +126,7 @@ async function removeAvailability(id: number) {
 
 <template>
   <div class="profs-view">
+    <button class="btn-back" @click="router.push({ name: 'jornada-dashboard' })">← Voltar à Jornada</button>
     <h2 class="profs-view__title">Professores e Disponibilidades</h2>
 
     <div class="profs-view__grid">
@@ -91,7 +137,7 @@ async function removeAvailability(id: number) {
         <UiAsyncPanel :loading="loadingProfs">
           <table class="data-table">
             <thead>
-              <tr><th>Nome</th><th>E-mail</th><th>Reg. Funcional</th><th>Curso Base</th></tr>
+              <tr><th>Nome</th><th>E-mail</th><th>Reg. Funcional</th><th>Curso Base</th><th>Dias Semana</th><th></th></tr>
             </thead>
             <tbody>
               <tr v-for="p in professors ?? []" :key="p.id">
@@ -99,13 +145,39 @@ async function removeAvailability(id: number) {
                 <td>{{ p.email }}</td>
                 <td>{{ p.registroFuncional ?? '—' }}</td>
                 <td>{{ p.cursoBase ?? '—' }}</td>
+                <td>{{ diasLabel(p.diasSemana) }}</td>
+                <td><button class="btn-link" @click="openSchedule(p)">Editar dias</button></td>
               </tr>
               <tr v-if="!loadingProfs && !professors?.length">
-                <td colspan="4" class="empty-row">Nenhum professor encontrado.</td>
+                <td colspan="6" class="empty-row">Nenhum professor encontrado.</td>
               </tr>
             </tbody>
           </table>
         </UiAsyncPanel>
+
+        <!-- Modal editar dias da semana -->
+        <div v-if="editingSchedule" class="modal-overlay" @click.self="editingSchedule = null">
+          <div class="modal">
+            <h3 class="modal__title">Dias de disponibilidade semanal</h3>
+            <p class="modal__desc">Selecione os dias em que este professor está presente na faculdade.</p>
+            <div class="dias-check">
+              <label v-for="d in DIAS" :key="d.value" class="dia-label">
+                <input
+                  type="checkbox"
+                  :checked="editingSchedule.dias.includes(d.value)"
+                  @change="toggleDia(d.value)"
+                />
+                {{ d.label }}
+              </label>
+            </div>
+            <div class="modal__actions">
+              <button class="btn btn--primary" :disabled="savingSchedule" @click="saveSchedule">
+                {{ savingSchedule ? 'Salvando…' : 'Salvar' }}
+              </button>
+              <button class="btn" @click="editingSchedule = null">Cancelar</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Disponibilidades -->
@@ -151,6 +223,8 @@ async function removeAvailability(id: number) {
 </template>
 
 <style scoped>
+.btn-back { background: none; border: none; cursor: pointer; color: var(--color-primary, #0d631b); font-size: .85rem; font-weight: 600; padding: 0; margin-bottom: 1rem; display: inline-block; }
+.btn-back:hover { text-decoration: underline; }
 .profs-view { padding: 1.5rem; }
 .profs-view__title { font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
 .profs-view__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
@@ -171,4 +245,11 @@ async function removeAvailability(id: number) {
 .data-table th, .data-table td { padding: .5rem .6rem; border-bottom: 1px solid #f3f4f6; text-align: left; }
 .data-table th { font-weight: 600; font-size: .78rem; text-transform: uppercase; color: #6b7280; }
 .empty-row { text-align: center; color: #9ca3af; padding: 1.5rem; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: #fff; border-radius: 10px; padding: 1.5rem; width: 380px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+.modal__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 .5rem; }
+.modal__desc { font-size: .85rem; color: #6b7280; margin: 0 0 1rem; }
+.modal__actions { display: flex; gap: .5rem; margin-top: 1.25rem; }
+.dias-check { display: flex; gap: .75rem; flex-wrap: wrap; }
+.dia-label { display: flex; align-items: center; gap: .35rem; font-size: .9rem; cursor: pointer; }
 </style>

@@ -3,7 +3,10 @@ import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiRequest } from '@/composables/useApiRequest'
+
+const router = useRouter()
 
 type RoomRow = {
   id: number
@@ -27,6 +30,7 @@ watch(dataEvento, execute)
 
 <template>
   <div class="rooms-view">
+    <button class="btn-back" @click="router.push({ name: 'jornada-dashboard' })">← Voltar à Jornada</button>
     <h2 class="rooms-view__title">Salas e Bancas</h2>
 
     <div class="rooms-view__filter">
@@ -77,6 +81,8 @@ watch(dataEvento, execute)
 </template>
 
 <style scoped>
+.btn-back { background: none; border: none; cursor: pointer; color: var(--color-primary, #0d631b); font-size: .85rem; font-weight: 600; padding: 0; margin-bottom: 1rem; display: inline-block; }
+.btn-back:hover { text-decoration: underline; }
 .rooms-view { padding: 1.5rem; }
 .rooms-view__title { font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
 .rooms-view__filter { display: flex; align-items: flex-end; gap: .75rem; margin-bottom: 1.25rem; }

@@ -19,6 +19,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../identity-access/decorators/current-user.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { UserRole } from '../../../database/entities/enums';
+import { JORNADA_ADMIN_ROLES } from '../../../common/guards/jornada-roles';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { WorksService } from '../services/works.service';
 import { CreateWorkDto } from '../dto/create-work.dto';
@@ -34,19 +35,19 @@ export class WorksController {
   constructor(private readonly service: WorksService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   list(@Query() query: { page?: string; limit?: string; status?: string; q?: string }) {
     return this.service.list(query);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.service.findOne(id);
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR, UserRole.STUDENT)
+  @Roles(...JORNADA_ADMIN_ROLES, UserRole.STUDENT)
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
   create(
@@ -70,13 +71,13 @@ export class WorksController {
   }
 
   @Patch('moderate')
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   moderate(@Body() dto: ModerateWorksDto) {
     return this.service.moderate(dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.softDelete(id);
   }

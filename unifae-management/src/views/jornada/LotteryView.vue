@@ -3,8 +3,11 @@ import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+
+const router = useRouter()
 
 type RoomRow = {
   id: number
@@ -71,6 +74,7 @@ async function runLottery() {
 
 <template>
   <div class="lottery-view">
+    <button class="btn-back" @click="router.push({ name: 'jornada-dashboard' })">← Voltar à Jornada</button>
     <h2 class="lottery-view__title">Sorteio de Bancas</h2>
 
     <div class="lottery-view__controls">
@@ -119,6 +123,8 @@ async function runLottery() {
 </template>
 
 <style scoped>
+.btn-back { background: none; border: none; cursor: pointer; color: var(--color-primary, #0d631b); font-size: .85rem; font-weight: 600; padding: 0; margin-bottom: 1rem; display: inline-block; }
+.btn-back:hover { text-decoration: underline; }
 .lottery-view { padding: 1.5rem; }
 .lottery-view__title { font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
 .lottery-view__controls { display: flex; align-items: flex-end; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }

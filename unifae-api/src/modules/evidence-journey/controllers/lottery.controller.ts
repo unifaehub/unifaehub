@@ -4,7 +4,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../identity-access/decorators/current-user.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { UserRole } from '../../../database/entities/enums';
+import { JORNADA_ADMIN_ROLES } from '../../../common/guards/jornada-roles';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { LotteryService } from '../services/lottery.service';
 import { RunLotteryDto } from '../dto/run-lottery.dto';
@@ -20,7 +20,7 @@ export class LotteryController {
   constructor(private readonly service: LotteryService) {}
 
   @Post('run')
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   run(
     @Body() dto: RunLotteryDto,
     @CurrentUser() user: UserEntity,
@@ -31,7 +31,7 @@ export class LotteryController {
   }
 
   @Get('rooms')
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   getRooms(@Query('dataEvento') dataEvento: string) {
     return this.service.getRooms(dataEvento);
   }

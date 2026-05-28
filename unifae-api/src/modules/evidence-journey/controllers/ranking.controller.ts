@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { UserRole } from '../../../database/entities/enums';
+import { JORNADA_ADMIN_ROLES } from '../../../common/guards/jornada-roles';
 import { RankingService } from '../services/ranking.service';
 
 @ApiTags('Jornada — Ranking')
@@ -14,7 +14,7 @@ export class RankingController {
   constructor(private readonly service: RankingService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR)
+  @Roles(...JORNADA_ADMIN_ROLES)
   getRanking(@Query() query: { page?: string; limit?: string }) {
     return this.service.getRanking(query);
   }

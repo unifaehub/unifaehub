@@ -108,6 +108,10 @@ export class UserEntity {
   @Column({ name: 'extra_roles', type: 'simple-array', nullable: true })
   extraRoles: UserRole[] | null;
 
+  /** Dias da semana disponíveis para eventos da Jornada (1=Seg…5=Sex). Armazenado como CSV. */
+  @Column({ name: 'dias_semana', type: 'simple-array', nullable: true })
+  diasSemana: string[] | null;
+
   @OneToMany(() => UserSpecialtyEntity, (specialty) => specialty.user)
   specialties: UserSpecialtyEntity[];
 }

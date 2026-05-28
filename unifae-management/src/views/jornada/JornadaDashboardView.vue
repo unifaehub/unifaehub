@@ -12,6 +12,7 @@ const sections = ref([
   { name: 'Perguntas', desc: 'Configurar perguntas dinâmicas de avaliação', route: 'jornada-questions' },
   { name: 'Palavra-Chave', desc: 'Agendar palavras-chave do evento', route: 'jornada-keywords' },
   { name: 'Ranking', desc: 'Visualizar ranking final dos trabalhos', route: 'jornada-ranking' },
+  { name: 'Configurações', desc: 'Datas, local, setores e salas do evento', route: 'jornada-config' },
 ])
 </script>
 

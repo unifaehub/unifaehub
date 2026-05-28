@@ -13,7 +13,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import { UserRole } from '../../../database/entities/enums';
+import { JORNADA_READ_ROLES, JORNADA_WRITE_ROLES } from '../../../common/guards/jornada-roles';
 import { QuestionsService } from '../services/questions.service';
 import { CreateQuestionDto } from '../dto/create-question.dto';
 
@@ -25,25 +25,25 @@ export class QuestionsController {
   constructor(private readonly service: QuestionsService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.COORDINATOR, UserRole.PROFESSOR)
+  @Roles(...JORNADA_READ_ROLES)
   list() {
     return this.service.list();
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(...JORNADA_WRITE_ROLES)
   create(@Body() dto: CreateQuestionDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(...JORNADA_WRITE_ROLES)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateQuestionDto>) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(...JORNADA_WRITE_ROLES)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
