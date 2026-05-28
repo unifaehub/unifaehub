@@ -3,6 +3,7 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsOptional,
   IsPositive,
   IsString,
   MinLength,
@@ -14,12 +15,20 @@ export enum LoginAccessMode {
   GLOBAL = 'GLOBAL',
   /** Acesso no contexto de um aplicativo específico. */
   APP = 'APP',
+  /** Acesso à Jornada de Evidências (professor via registro_funcional ou aluno via RA). */
+  JORNADA = 'JORNADA',
 }
 
 export class LoginDto {
-  @ApiProperty({ example: 'paciente1@unifae.local' })
+  @ApiPropertyOptional({ example: 'admin@unifae.local', description: 'E-mail do usuário (modos GLOBAL e APP).' })
+  @ValidateIf((o: LoginDto) => !o.identifier)
   @IsEmail()
-  email: string;
+  email?: string;
+
+  @ApiPropertyOptional({ example: '123456', description: 'RA ou registro_funcional (modo JORNADA).' })
+  @IsOptional()
+  @IsString()
+  identifier?: string;
 
   @ApiProperty({ example: 'Admin@123', minLength: 6 })
   @IsString()

@@ -94,6 +94,15 @@ export class AuthService {
     return ok ? user : null;
   }
 
+  private async resolveUserByIdentifier(identifier: string): Promise<UserEntity | null> {
+    return this.users
+      .createQueryBuilder('u')
+      .where('LOWER(u.email) = LOWER(:id)', { id: identifier })
+      .orWhere('u.ra = :id', { id: identifier })
+      .orWhere('u.registro_funcional = :id', { id: identifier })
+      .getOne();
+  }
+
   async listAppsForLogin(): Promise<Pick<AppEntity, 'id' | 'name'>[]> {
     return this.apps.find({
       where: { active: true },
@@ -177,8 +186,20 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, ctx?: RequestContext) {
-    const user = await this.validateUser(dto.email, dto.password);
-    if (!user) throw new UnauthorizedException('Credenciais inválidas');
+    let user: UserEntity | null;
+
+    if (dto.accessMode === LoginAccessMode.JORNADA) {
+      const id = dto.identifier?.trim() ?? dto.email?.trim();
+      if (!id) throw new UnauthorizedException('Informe o identificador (RA, registro funcional ou e-mail).');
+      user = await this.resolveUserByIdentifier(id);
+      if (!user) throw new UnauthorizedException('Credenciais inválidas');
+      const ok = await bcrypt.compare(dto.password, user.password);
+      if (!ok) throw new UnauthorizedException('Credenciais inválidas');
+    } else {
+      if (!dto.email) throw new UnauthorizedException('Informe o e-mail.');
+      user = await this.validateUser(dto.email, dto.password);
+      if (!user) throw new UnauthorizedException('Credenciais inválidas');
+    }
 
     if (user.deletedAt) throw new UnauthorizedException('Usuário removido do sistema.');
 
@@ -200,6 +221,10 @@ export class AuthService {
         throw new UnauthorizedException(
           'Acesso a todos os aplicativos é exclusivo de administradores. Selecione o aplicativo ao qual você pertence.',
         );
+      }
+    } else if (dto.accessMode === LoginAccessMode.JORNADA) {
+      if (user.role !== UserRole.PROFESSOR && user.role !== UserRole.STUDENT && user.role !== UserRole.ADMIN) {
+        throw new UnauthorizedException('Acesso à Jornada restrito a professores, alunos e administradores.');
       }
     } else {
       if (dto.appId == null) {

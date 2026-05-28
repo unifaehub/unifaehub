@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bull';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
+import { EvidenceJourneyModule } from './modules/evidence-journey/evidence-journey.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -28,6 +30,16 @@ import { PatientAppointmentsModule } from './modules/patient-appointments/patien
       isGlobal: true,
       load: [configuration],
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        redis: {
+          host: config.get<string>('redis.host') ?? 'localhost',
+          port: config.get<number>('redis.port') ?? 6379,
+        },
+      }),
+    }),
     DatabaseModule,
     AuditModule,
     HealthModule,
@@ -46,6 +58,7 @@ import { PatientAppointmentsModule } from './modules/patient-appointments/patien
     AppHomeModule,
     CareLocationsModule,
     PatientAppointmentsModule,
+    EvidenceJourneyModule,
   ],
 })
 export class AppModule {}

@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -37,6 +38,15 @@ import {
   UserSpecialtyEntity,
   UserConsentAcceptanceEntity,
   PasswordResetTokenEntity,
+  ProfessorAvailabilityEntity,
+  EvidenceWorkEntity,
+  WorkGroupEntity,
+  PresentationRoomEntity,
+  RoomProfessorEntity,
+  RoomBestWorkEntity,
+  DynamicQuestionEntity,
+  EvaluationEntity,
+  KeywordEntity,
 } from './entities';
 
 const entities = [
@@ -75,6 +85,15 @@ const entities = [
   NotificationEntity,
   EventEntity,
   EventAttendanceEntity,
+  ProfessorAvailabilityEntity,
+  EvidenceWorkEntity,
+  WorkGroupEntity,
+  PresentationRoomEntity,
+  RoomProfessorEntity,
+  RoomBestWorkEntity,
+  DynamicQuestionEntity,
+  EvaluationEntity,
+  KeywordEntity,
 ];
 
 @Module({
@@ -101,6 +120,9 @@ const entities = [
           database: db?.name ?? 'unifae_management',
           entities,
           synchronize: db?.synchronize ?? false,
+          migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
+          migrationsRun: true,
+          migrationsTableName: 'typeorm_migrations',
           // Evita poluir o terminal com queries; mantém apenas avisos/erros.
           logging: nodeEnv === 'development' ? ['error', 'warn'] : ['error'],
         };

@@ -64,4 +64,8 @@ export default () => ({
     /** Ex.: https://app.unifae.edu.br — enviado como link /redefinir-senha?token= */
     publicWebBase: process.env.PASSWORD_RESET_PUBLIC_WEB_BASE?.trim() ?? '',
   },
+  redis: {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+  },
 });

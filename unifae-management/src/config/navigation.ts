@@ -35,6 +35,13 @@ export const NAV_TOP: NavItem[] = [
     section: 'main',
     roles: ['ADMIN', 'COORDINATOR', 'PROFESSOR', 'STUDENT'],
   },
+  {
+    routeName: 'jornada-dashboard',
+    label: 'Jornada de Evidências',
+    icon: 'science',
+    section: 'main',
+    roles: ['ADMIN', 'COORDINATOR'],
+  },
 ]
 
 export const NAV_FOOTER: NavItem[] = [

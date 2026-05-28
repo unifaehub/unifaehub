@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "UNIFAE Jornada de Evidências",
+    "slug": "unifae-app-jorney-evidence",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "unifae",
+    "userInterfaceStyle": "light",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d631b"
+      },
+      "package": "br.edu.unifae.hub"
+    },
+    "ios": {
+      "bundleIdentifier": "br.edu.unifae.hub"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ]
+  }
+}

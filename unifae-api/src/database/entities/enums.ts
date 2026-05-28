@@ -55,3 +55,23 @@ export enum AppointmentStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
 }
+
+// ─── Jornada de Evidências ───────────────────────────────────────────────────
+
+export enum EvidenceWorkStatus {
+  PENDENTE = 'Pendente',
+  APROVADO = 'Aprovado',
+  REPROVADO = 'Reprovado',
+  INATIVO = 'Inativo',
+}
+
+export enum QuestionType {
+  RESUMO = 'Resumo',
+  APRESENTACAO = 'Apresentação',
+}
+
+export enum PresentationStatus {
+  PRESENTE = 'Presente',
+  AUSENTE = 'Ausente',
+  INDEFERIDO = 'Indeferido',
+}

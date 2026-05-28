@@ -121,6 +121,50 @@ export class MailService {
     });
   }
 
+  async sendDayClosureReport(params: {
+    to: string;
+    recipientName?: string;
+    dataEvento: string;
+    trabalhoTitulo: string;
+    rows: { professor: string; pergunta: string; tipo: string; nota: number; status: string; comentario: string }[];
+  }): Promise<void> {
+    if (!this.isConfigured()) {
+      this.logger.warn('[dev] SMTP não configurado — relatório de fechamento não enviado.');
+      return;
+    }
+    const mail = this.config.get<{ from: string }>('mail');
+    const from = mail?.from ?? 'UNIFAE Hub';
+    const tableRows = params.rows
+      .map(
+        (r) =>
+          `<tr><td>${this.escapeHtml(r.professor)}</td><td>${this.escapeHtml(r.pergunta)}</td>` +
+          `<td>${this.escapeHtml(r.tipo)}</td><td>${r.nota}</td><td>${this.escapeHtml(r.status)}</td>` +
+          `<td>${this.escapeHtml(r.comentario)}</td></tr>`,
+      )
+      .join('');
+
+    const html = `
+<div style="font-family:sans-serif;padding:24px;color:#333">
+  <h2>Relatório de Fechamento — ${this.escapeHtml(params.dataEvento)}</h2>
+  <p>Olá${params.recipientName ? `, <strong>${this.escapeHtml(params.recipientName)}</strong>` : ''}!</p>
+  <p>Trabalho: <strong>${this.escapeHtml(params.trabalhoTitulo)}</strong></p>
+  <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%">
+    <thead style="background:#e8f5e9">
+      <tr><th>Professor</th><th>Pergunta</th><th>Tipo</th><th>Nota</th><th>Status</th><th>Comentário</th></tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+  <p style="margin-top:16px;color:#666;font-size:12px">&copy; ${new Date().getFullYear()} UNIFAE Hub — Jornada de Evidências</p>
+</div>`;
+
+    await this.getTransporter().sendMail({
+      from,
+      to: params.to,
+      subject: `Relatório de Fechamento — ${params.dataEvento} — ${params.trabalhoTitulo}`,
+      html,
+    });
+  }
+
   private escapeHtml(s: string): string {
     return s
       .replace(/&/g, '&amp;')

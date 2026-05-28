@@ -92,6 +92,18 @@ export class UserEntity {
   @Column({ name: 'profile_photo_path', type: 'varchar', length: 512, nullable: true })
   profilePhotoPath: string | null;
 
+  /** Registro Acadêmico — login do aluno na Jornada de Evidências. */
+  @Column({ type: 'varchar', length: 50, nullable: true, unique: true })
+  ra: string | null;
+
+  /** Registro funcional (6 dígitos) — login do professor na Jornada de Evidências. */
+  @Column({ name: 'registro_funcional', type: 'varchar', length: 10, nullable: true, unique: true })
+  registroFuncional: string | null;
+
+  /** Curso de origem do professor — usado nas regras de sorteio da Jornada. */
+  @Column({ name: 'curso_base', type: 'varchar', length: 200, nullable: true })
+  cursoBase: string | null;
+
   @OneToMany(() => UserSpecialtyEntity, (specialty) => specialty.user)
   specialties: UserSpecialtyEntity[];
 }
