@@ -7,11 +7,10 @@ import { RoomProfessorEntity } from '../../../database/entities/room-professor.e
 import { ProfessorAvailabilityEntity } from '../../../database/entities/professor-availability.entity';
 import { WorkGroupEntity } from '../../../database/entities/work-group.entity';
 import { UserEntity } from '../../../database/entities/user.entity';
-import { EvidenceWorkStatus, UserRole } from '../../../database/entities/enums';
+import { EvidenceWorkStatus } from '../../../database/entities/enums';
 import { AuditService } from '../../audit/audit.service';
 import type { RequestContext } from '../../../common/http/request-context';
 
-const MAX_WORKS_PER_ROOM = 10;
 const MIN_PROFESSORS_PER_BANCA = 2;
 const MAX_PROFESSORS_PER_BANCA = 3;
 
@@ -33,22 +32,18 @@ export class LotteryService {
     private readonly audit: AuditService,
   ) {}
 
-  async runLottery(
-    dataEvento: string,
-    executorId: number,
-    ctx?: RequestContext,
-  ) {
+  async runLottery(dataEvento: string, executorId: number, ctx?: RequestContext) {
     // 1. Limpar sorteio anterior para este dia
     const existingRooms = await this.rooms.find({ where: { dataEvento } });
     if (existingRooms.length > 0) {
-      const roomIds = existingRooms.map((r) => r.id);
-      const trabalhoIds = existingRooms.map((r) => r.trabalhoId);
+      const roomIds      = existingRooms.map((r) => r.id);
+      const trabalhoIds  = existingRooms.map((r) => r.trabalhoId);
       await this.roomProfessors.delete({ salaId: In(roomIds) as any });
       await this.groups.delete({ trabalhoId: In(trabalhoIds) as any });
       await this.rooms.delete({ dataEvento });
     }
 
-    // 2. Trabalhos aprovados
+    // 2. Trabalhos aprovados (sem exclusão lógica)
     const approvedWorks = await this.works.find({
       where: { status: EvidenceWorkStatus.APROVADO, deletedAt: IsNull() },
       relations: ['aluno'],
@@ -64,85 +59,88 @@ export class LotteryService {
     });
     if (avails.length < MIN_PROFESSORS_PER_BANCA) {
       throw new BadRequestException(
-        `São necessários ao menos ${MIN_PROFESSORS_PER_BANCA} professores disponíveis.`,
+        `São necessários ao menos ${MIN_PROFESSORS_PER_BANCA} professores disponíveis para a data ${dataEvento}. ` +
+        `Cadastre disponibilidades na tela de Professores.`,
       );
     }
     const professors = avails.map((a) => a.professor);
 
     // 4. Embaralhar trabalhos e professores
-    const shuffledWorks = this.shuffle([...approvedWorks]);
-    const shuffledProfessors = this.shuffle([...professors]);
-
-    // 5. Distribuir trabalhos em salas (max 10 por sala)
-    const workChunks = this.chunkArray(shuffledWorks, MAX_WORKS_PER_ROOM);
+    const shuffledWorks      = this.shuffle([...approvedWorks]);
+    let   professorIndex     = 0;
     const savedRooms: PresentationRoomEntity[] = [];
+    const alunoUsed          = new Set<number>(); // um trabalho por aluno por dia
 
-    const alunoRoomDayMap = new Map<number, number>(); // alunoId -> count on day
+    for (const work of shuffledWorks) {
+      // Regra: aluno não apresenta duas vezes no mesmo dia
+      if (alunoUsed.has(work.alunoId)) continue;
 
-    for (const chunk of workChunks) {
-      // Regra: aluno não pode ter 2 apresentações no mesmo dia
-      const validWorks = chunk.filter((w) => {
-        const count = alunoRoomDayMap.get(w.alunoId) ?? 0;
-        return count === 0;
-      });
-      if (validWorks.length === 0) continue;
-
-      // Selecionar professores compatíveis para este chunk
-      // Regra: professor não avalia alunos do seu curso_base
-      const chunkCursos = [...new Set(validWorks.map((w) => w.cursoTrabalho))];
-      const eligibleProfessors = shuffledProfessors.filter(
-        (p) => !chunkCursos.includes(p.cursoBase ?? ''),
+      // 5. Selecionar banca elegível POR TRABALHO
+      // Regra: professor não avalia alunos do mesmo cursoBase que o trabalho
+      const eligible = professors.filter(
+        (p) => (p.cursoBase ?? '').toLowerCase() !== (work.cursoTrabalho ?? '').toLowerCase(),
       );
 
-      if (eligibleProfessors.length < MIN_PROFESSORS_PER_BANCA) {
-        continue; // pula salas sem banca suficiente
+      if (eligible.length < MIN_PROFESSORS_PER_BANCA) {
+        // Não há banca suficiente para este trabalho — pular, não cancelar o sorteio inteiro
+        continue;
       }
 
-      const bancaSize = Math.min(MAX_PROFESSORS_PER_BANCA, eligibleProfessors.length);
-      const banca = eligibleProfessors.slice(0, bancaSize);
-      const lider = banca[0];
+      // Rotacionar para distribuir carga entre professores
+      const rotated   = this.rotateArray(eligible, professorIndex);
+      const bancaSize = Math.min(MAX_PROFESSORS_PER_BANCA, rotated.length);
+      const banca     = rotated.slice(0, bancaSize);
+      const lider     = banca[0];
 
-      // Criar uma sala por trabalho no chunk
-      for (const work of validWorks) {
-        const room = this.rooms.create({
-          dataEvento,
-          trabalhoId: work.id,
-          professorLiderId: lider.id,
-          fechada: false,
-        });
-        const savedRoom = await this.rooms.save(room);
+      professorIndex = (professorIndex + bancaSize) % professors.length;
 
-        for (const prof of banca) {
-          await this.roomProfessors.save(
-            this.roomProfessors.create({ salaId: savedRoom.id, professorId: prof.id }),
-          );
-        }
+      // 6. Criar sala
+      const room = this.rooms.create({
+        dataEvento,
+        trabalhoId: work.id,
+        professorLiderId: lider.id,
+        fechada: false,
+      });
+      const savedRoom = await this.rooms.save(room);
 
-        // Registrar grupo (aluno -> trabalho -> dia)
-        await this.groups.save(
-          this.groups.create({ alunoId: work.alunoId, trabalhoId: work.id }),
+      for (const prof of banca) {
+        await this.roomProfessors.save(
+          this.roomProfessors.create({ salaId: savedRoom.id, professorId: prof.id }),
         );
-
-        alunoRoomDayMap.set(work.alunoId, (alunoRoomDayMap.get(work.alunoId) ?? 0) + 1);
-        savedRooms.push(savedRoom);
       }
 
-      // Rotacionar professores para próxima sala
-      shuffledProfessors.push(...shuffledProfessors.splice(0, bancaSize));
+      // Registrar grupo (aluno ↔ trabalho no dia)
+      await this.groups.save(
+        this.groups.create({ alunoId: work.alunoId, trabalhoId: work.id }),
+      );
+
+      alunoUsed.add(work.alunoId);
+      savedRooms.push(savedRoom);
     }
+
+    const skipped = approvedWorks.length - savedRooms.length;
 
     await this.audit.log({
       userId: executorId,
       action: 'LOTTERY_RUN',
       entity: 'evidence-journey/lottery',
       entityId: dataEvento,
-      metadata: { roomsCreated: savedRooms.length, worksProcessed: approvedWorks.length },
+      metadata: {
+        roomsCreated: savedRooms.length,
+        worksProcessed: approvedWorks.length,
+        skipped,
+      },
       ctx: ctx ?? null,
     });
 
     return {
       roomsCreated: savedRooms.length,
+      skipped,
       dataEvento,
+      message:
+        savedRooms.length === 0
+          ? 'Nenhuma sala criada. Verifique se há professores disponíveis e se os cursos base não conflitam com os trabalhos aprovados.'
+          : `Sorteio concluído: ${savedRooms.length} sala(s) criada(s)${skipped > 0 ? `, ${skipped} trabalho(s) sem banca elegível` : ''}.`,
     };
   }
 
@@ -157,16 +155,15 @@ export class LotteryService {
   private shuffle<T>(arr: T[]): T[] {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+      ;[arr[i], arr[j]] = [arr[j]!, arr[i]!];
     }
     return arr;
   }
 
-  private chunkArray<T>(arr: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) {
-      chunks.push(arr.slice(i, i + size));
-    }
-    return chunks;
+  private rotateArray<T>(arr: T[], offset: number): T[] {
+    const n = arr.length;
+    if (n === 0) return arr;
+    const start = ((offset % n) + n) % n;
+    return [...arr.slice(start), ...arr.slice(0, start)];
   }
 }

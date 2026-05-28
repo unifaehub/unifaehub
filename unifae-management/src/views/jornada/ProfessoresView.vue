@@ -2,10 +2,13 @@
 import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiRequest } from '@/composables/useApiRequest'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
+
+const router = useRouter()
 
 type Professor = {
   id: number
@@ -89,10 +92,46 @@ const { data: availabilities, loading: loadingAvail, failed: failedAvail, execut
 reloadProfs()
 watch(filterDate, reloadAvail, { immediate: true })
 
+// Dia da semana da data selecionada (1=Seg…5=Sex, 0=Dom, 6=Sab)
+const selectedDayOfWeek = computed(() => {
+  if (!newDataEvento.value) return null
+  const d = new Date(newDataEvento.value + 'T12:00:00')
+  const jsDay = d.getDay() // 0=Dom, 1=Seg…6=Sab
+  // converter para 1=Seg…5=Sex (sábado/domingo retornam null)
+  if (jsDay === 0 || jsDay === 6) return null
+  return String(jsDay)
+})
+
+// Professor selecionado
+const selectedProfessor = computed(() =>
+  (professors.value ?? []).find((p) => p.id === Number(newProfessorId.value)) ?? null,
+)
+
+// Aviso: professor não tem disponibilidade no dia da semana selecionado
+const availabilityWarning = computed(() => {
+  const prof = selectedProfessor.value
+  const day  = selectedDayOfWeek.value
+  if (!prof || !day || !newDataEvento.value) return null
+  if (!prof.diasSemana?.length) return null // sem restrição cadastrada
+  if (!prof.diasSemana.includes(day)) {
+    const dayLabel = DIAS.find((d) => d.value === day)?.label ?? day
+    return `⚠️ ${prof.name} não está disponível às ${dayLabel}s (dias cadastrados: ${diasLabel(prof.diasSemana)}).`
+  }
+  return null
+})
+
 async function addAvailability() {
   if (!newProfessorId.value || !newDataEvento.value) {
     toast.error('Selecione professor e data.')
     return
+  }
+  // Bloquear se dia da semana não está nos dias cadastrados
+  if (availabilityWarning.value) {
+    const ok = await confirm.confirm({
+      message: `${availabilityWarning.value}\n\nDeseja adicionar mesmo assim?`,
+      tone: 'danger',
+    })
+    if (!ok) return
   }
   adding.value = true
   try {
@@ -104,8 +143,9 @@ async function addAvailability() {
     newProfessorId.value = ''
     newDataEvento.value = ''
     reloadAvail()
-  } catch {
-    toast.error('Erro ao adicionar disponibilidade.')
+  } catch (e: any) {
+    const msg = e?.response?.data?.message ?? 'Erro ao adicionar disponibilidade.'
+    toast.error(msg)
   } finally {
     adding.value = false
   }
@@ -194,6 +234,7 @@ async function removeAvailability(id: number) {
             {{ adding ? 'Adicionando…' : 'Adicionar' }}
           </button>
         </div>
+        <div v-if="availabilityWarning" class="avail-warning">{{ availabilityWarning }}</div>
 
         <div class="avail-filter">
           <label>Filtrar por data:</label>
@@ -231,7 +272,8 @@ async function removeAvailability(id: number) {
 @media (max-width: 900px) { .profs-view__grid { grid-template-columns: 1fr; } }
 .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.25rem; }
 .card__title { font-size: 1rem; font-weight: 600; margin: 0 0 1rem; }
-.avail-form { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.avail-form { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .5rem; }
+.avail-warning { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: .5rem .75rem; font-size: .82rem; color: #92400e; margin-bottom: .75rem; }
 .avail-filter { display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; font-size: .85rem; }
 .input-field { padding: .45rem .75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem; }
 .input-field--sm { padding: .3rem .6rem; }

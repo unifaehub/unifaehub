@@ -43,13 +43,29 @@ function addDate() {
   const d = newDataInput.value.trim()
   if (!d) return
   if (!config.value.datasEvento) config.value.datasEvento = []
-  if (!config.value.datasEvento.includes(d)) config.value.datasEvento.push(d)
+  if (config.value.datasEvento.includes(d)) {
+    toast.error(`A data ${formatDate(d)} já está cadastrada no evento.`)
+    return
+  }
+  config.value.datasEvento.push(d)
   newDataInput.value = ''
 }
 
 function removeDate(d: string) {
   if (!config.value.datasEvento) return
   config.value.datasEvento = config.value.datasEvento.filter((x) => x !== d)
+}
+
+async function clearConfig() {
+  const ok = await confirm.confirm({
+    message: 'Limpar todas as informações do evento (nome, local e datas)? Esta ação não exclui setores nem salas.',
+    tone: 'danger',
+  })
+  if (!ok) return
+  config.value.eventoNome = null
+  config.value.eventoLocal = null
+  config.value.datasEvento = null
+  await saveConfig()
 }
 
 function formatDate(d: string) {
@@ -158,7 +174,21 @@ onMounted(() => { loadConfig(); loadSectors() })
 
     <!-- ── Evento ─────────────────────────────────────────────────────── -->
     <section class="card">
-      <h3 class="card__title">Informações do Evento</h3>
+      <div class="card__header">
+        <div>
+          <h3 class="card__title">
+            {{ config.eventoNome ? `Editando: ${config.eventoNome}` : 'Novo Evento' }}
+          </h3>
+          <p class="card__desc">
+            {{ config.eventoNome
+              ? 'Altere os dados e clique em Salvar para atualizar o evento.'
+              : 'Preencha os dados abaixo para configurar o evento da Jornada.' }}
+          </p>
+        </div>
+        <button v-if="config.eventoNome" class="btn btn--outline btn--sm" @click="clearConfig">
+          🗑 Limpar evento
+        </button>
+      </div>
       <UiConnectionRetry v-if="failedConfig" @retry="loadConfig" />
       <UiAsyncPanel :loading="loadingConfig">
         <div class="form-grid">
@@ -179,7 +209,7 @@ onMounted(() => { loadConfig(); loadSectors() })
             <button class="btn btn--outline" @click="addDate">+ Adicionar</button>
           </div>
           <div class="tags-row">
-            <span v-for="d in config.datasEvento ?? []" :key="d" class="date-tag">
+            <span v-for="d in (config.datasEvento ?? []).slice().sort()" :key="d" class="date-tag">
               {{ formatDate(d) }}
               <button @click="removeDate(d)" class="tag-remove">×</button>
             </span>
