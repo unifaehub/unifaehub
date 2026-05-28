@@ -197,6 +197,10 @@ export class UsersService {
       active: dto.active ?? true,
       activeFrom: dto.activeFrom ?? null,
       activeUntil: dto.activeUntil ?? null,
+      diasSemana: dto.diasSemana?.length ? dto.diasSemana : null,
+      registroFuncional: dto.registroFuncional?.trim() || null,
+      cursoBase: dto.cursoBase?.trim() || null,
+      ra: dto.ra?.trim() || null,
     });
     const saved = await this.users.save(row);
     if (saved.role === UserRole.COORDINATOR && dto.coordinatorSpecialties !== undefined) {
@@ -286,6 +290,10 @@ export class UsersService {
     if (dto.active !== undefined) row.active = dto.active;
     if (dto.activeFrom !== undefined) row.activeFrom = dto.activeFrom ?? null;
     if (dto.activeUntil !== undefined) row.activeUntil = dto.activeUntil ?? null;
+    if (dto.diasSemana !== undefined) row.diasSemana = dto.diasSemana?.length ? dto.diasSemana : null;
+    if (dto.registroFuncional !== undefined) row.registroFuncional = dto.registroFuncional?.trim() || null;
+    if (dto.cursoBase !== undefined) row.cursoBase = dto.cursoBase?.trim() || null;
+    if (dto.ra !== undefined) row.ra = dto.ra?.trim() || null;
     if (dto.password !== undefined && dto.password.length > 0) {
       row.password = await bcrypt.hash(dto.password, 10);
     }
@@ -456,6 +464,10 @@ export class UsersService {
       active: u.active,
       activeFrom: u.activeFrom,
       activeUntil: u.activeUntil,
+      diasSemana: u.diasSemana ?? [],
+      registroFuncional: u.registroFuncional ?? null,
+      cursoBase: u.cursoBase ?? null,
+      ra: u.ra ?? null,
       lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,

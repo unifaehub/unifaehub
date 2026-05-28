@@ -36,7 +36,9 @@ export class JornadaConfigService {
   // ── Config (singleton) ────────────────────────────────────────────────────
 
   async getConfig(): Promise<JornadaConfigEntity> {
-    let cfg = await this.configs.findOne({ where: {} as any, order: { id: 'ASC' } });
+    // findOne com where:{} não funciona no TypeORM 0.3 — usar find+take
+    const rows = await this.configs.find({ order: { id: 'ASC' }, take: 1 });
+    let cfg = rows[0] ?? null;
     if (!cfg) {
       cfg = this.configs.create({});
       cfg = await this.configs.save(cfg);

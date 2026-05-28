@@ -77,5 +77,29 @@ export class CreateUserDto {
   @ValidateNested({ each: true })
   @Type(() => CoordinatorSpecialtyDto)
   coordinatorSpecialties?: CoordinatorSpecialtyDto[];
+
+  /** Dias da semana presentes na faculdade (1=Seg…5=Sex) — professores e coordenadores. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  diasSemana?: string[] | null;
+
+  /** Registro funcional do professor (6 dígitos). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  registroFuncional?: string | null;
+
+  /** Curso base do professor — usado nas regras de sorteio. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  cursoBase?: string | null;
+
+  /** Registro Acadêmico (RA) do aluno. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  ra?: string | null;
 }
 

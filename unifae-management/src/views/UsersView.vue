@@ -69,6 +69,10 @@ const newActiveUntil = ref<string>('')
 const newAppId = ref<number | ''>('')
 const newCourseId = ref<number | ''>('')
 const newCoordinatorSpecialties = ref<SpecialtyFormRow[]>([])
+const newDiasSemana = ref<string[]>([])
+const newRegistroFuncional = ref('')
+const newCursoBase = ref('')
+const newRa = ref('')
 
 const appsOptions = ref<AppRow[]>([])
 const stats = ref<UserStats | null>(null)
@@ -90,6 +94,10 @@ const editActiveFrom = ref('')
 const editActiveUntil = ref('')
 const editAppId = ref<number | ''>('')
 const editCourseId = ref<number | ''>('')
+const editDiasSemana = ref<string[]>([])
+const editRegistroFuncional = ref('')
+const editCursoBase = ref('')
+const editRa = ref('')
 const editCoordinatorSpecialties = ref<SpecialtyFormRow[]>([])
 const editPhotoFile = ref<File | null>(null)
 const editPhotoInput = ref<HTMLInputElement | null>(null)
@@ -323,6 +331,10 @@ function openEdit(u: UserRow) {
   editActiveUntil.value = u.activeUntil ?? ''
   editCoordinatorSpecialties.value = specialtyRowsFromUser(u)
   if (!editCoordinatorSpecialties.value.length) resetEditSpecialties()
+  editDiasSemana.value = [...((u as any).diasSemana ?? [])]
+  editRegistroFuncional.value = (u as any).registroFuncional ?? ''
+  editCursoBase.value = (u as any).cursoBase ?? ''
+  editRa.value = (u as any).ra ?? ''
   editPhotoFile.value = null
   if (editPhotoInput.value) editPhotoInput.value.value = ''
   editPeriodError.value = null
@@ -359,6 +371,7 @@ async function saveEdit() {
   if (!validateEditPeriod()) return
   editing.value = true
   try {
+    const isJornadaRole = ['PROFESSOR', 'COORDINATOR'].includes(editRole.value)
     const payload: Record<string, unknown> = {
       name: editName.value.trim(),
       email: editEmail.value.trim(),
@@ -369,6 +382,10 @@ async function saveEdit() {
       courseId: editCourseId.value === '' ? null : editCourseId.value,
       coordinatorSpecialties:
         editRole.value === 'COORDINATOR' ? serializeSpecialties(editCoordinatorSpecialties.value) : [],
+      diasSemana: isJornadaRole ? (editDiasSemana.value.length ? editDiasSemana.value : null) : null,
+      registroFuncional: editRole.value === 'PROFESSOR' ? (editRegistroFuncional.value.trim() || null) : null,
+      cursoBase: editRole.value === 'PROFESSOR' ? (editCursoBase.value.trim() || null) : null,
+      ra: editRole.value === 'STUDENT' ? (editRa.value.trim() || null) : null,
     }
     if (editPassword.value.trim()) payload.password = editPassword.value
     if (editRole.value === 'STUDENT') {
@@ -730,6 +747,41 @@ onMounted(() => {
             <label>Até</label>
             <input v-model="editActiveUntil" class="in" type="date" />
           </div>
+        </div>
+
+        <!-- Campos Jornada — Aluno -->
+        <div v-if="editRole === 'STUDENT'" class="field">
+          <label>RA (Registro Acadêmico)</label>
+          <input v-model="editRa" class="in" placeholder="Ex.: 2021001" maxlength="50" />
+          <p class="hint">Login do aluno no app mobile da Jornada.</p>
+        </div>
+
+        <!-- Campos Jornada — Professor -->
+        <template v-if="editRole === 'PROFESSOR'">
+          <div class="row">
+            <div class="field">
+              <label>Registro Funcional</label>
+              <input v-model="editRegistroFuncional" class="in" placeholder="Ex.: 100001" maxlength="10" />
+              <p class="hint">Login do professor no app mobile.</p>
+            </div>
+            <div class="field">
+              <label>Curso base</label>
+              <input v-model="editCursoBase" class="in" placeholder="Ex.: Fisioterapia" maxlength="200" />
+              <p class="hint">Usado na regra de sorteio (professor não avalia do mesmo curso).</p>
+            </div>
+          </div>
+        </template>
+
+        <!-- Dias da semana — Professor e Coordenador -->
+        <div v-if="editRole === 'PROFESSOR' || editRole === 'COORDINATOR'" class="field">
+          <label>Dias presentes na faculdade</label>
+          <div class="dias-check">
+            <label v-for="d in [['1','Seg'],['2','Ter'],['3','Qua'],['4','Qui'],['5','Sex']]" :key="d[0]" class="chk-inline">
+              <input type="checkbox" :value="d[0]" v-model="editDiasSemana" />
+              {{ d[1] }}
+            </label>
+          </div>
+          <p class="hint">Usado pelo sorteio para garantir disponibilidade do professor no dia do evento.</p>
         </div>
 
         <div v-if="editRole === 'COORDINATOR'" class="field">
