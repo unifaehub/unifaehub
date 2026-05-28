@@ -39,9 +39,16 @@ export class EvaluationService {
   async getMyRooms(professorId: number) {
     return this.rooms
       .createQueryBuilder('r')
-      .innerJoin('r.banca', 'rp', 'rp.professorId = :pid', { pid: professorId })
+      // Filtrar somente salas onde o professor faz parte da banca
+      .andWhere(
+        'r.id IN (SELECT rp.sala_id FROM room_professors rp WHERE rp.professor_id = :pid)',
+        { pid: professorId },
+      )
       .leftJoinAndSelect('r.trabalho', 'w')
       .leftJoinAndSelect('w.aluno', 'a')
+      .leftJoinAndSelect('r.banca', 'banca')
+      .leftJoinAndSelect('banca.professor', 'bancaProf')
+      .leftJoinAndSelect('r.professorLider', 'lider')
       .where('r.fechada = false')
       .orderBy('r.dataEvento', 'ASC')
       .getMany();
