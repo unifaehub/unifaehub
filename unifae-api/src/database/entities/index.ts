@@ -43,3 +43,6 @@ export * from './room-best-work.entity';
 export * from './dynamic-question.entity';
 export * from './evaluation.entity';
 export * from './keyword.entity';
+export * from './jornada-config.entity';
+export * from './presentation-sector.entity';
+export * from './presentation-hall.entity';
