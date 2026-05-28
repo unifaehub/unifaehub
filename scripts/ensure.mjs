@@ -3,7 +3,7 @@
  * - copia `unifae-api/.env` a partir de `.env.example` se ainda não existir;
  * - executa `npm install` em `unifae-api` e `unifae-management` apenas se não houver `node_modules`.
  */
-import { copyFileSync, existsSync } from 'node:fs'
+import { copyFileSync, existsSync, writeFileSync, chmodSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -55,4 +55,22 @@ for (const { dir, name } of [
   } else {
     console.log(`[ensure] ${name}: node_modules OK`)
   }
+}
+
+// ── Git hook: pre-push ────────────────────────────────────────────────────────
+// Instala automaticamente em qualquer máquina que rodar npm run dev.
+// O hook chama scripts/pre-push.mjs que verifica o build antes de cada push.
+const hookPath = join(root, '.git', 'hooks', 'pre-push')
+const hookContent = `#!/bin/sh\nnode "$(git rev-parse --show-toplevel)/scripts/pre-push.mjs"\n`
+
+if (!existsSync(hookPath)) {
+  try {
+    writeFileSync(hookPath, hookContent, { encoding: 'utf8' })
+    try { chmodSync(hookPath, 0o755) } catch { /* Windows: chmod não necessário */ }
+    console.log('[ensure] Git hook pre-push instalado em .git/hooks/pre-push')
+  } catch (e) {
+    console.warn(`[ensure] Não foi possível instalar o hook pre-push: ${e.message}`)
+  }
+} else {
+  console.log('[ensure] Git hook pre-push: OK')
 }
