@@ -19,13 +19,16 @@ function AuthGuard() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('[AuthGuard] user:', user?.name ?? null, '| isLoading:', isLoading, '| segments:', segments);
     if (isLoading) return;
 
     const onLoginScreen = segments[0] === 'login';
 
     if (!user && !onLoginScreen) {
+      console.log('[AuthGuard] Sem sessão → redirecionando para /login');
       router.replace('/login');
     } else if (user && onLoginScreen) {
+      console.log('[AuthGuard] Sessão ativa na tela de login → redirecionando para /');
       router.replace('/');
     }
   }, [user, isLoading, segments]);
