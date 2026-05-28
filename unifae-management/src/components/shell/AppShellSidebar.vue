@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, useRoute } from 'vue-router'
 import { computed, onMounted, ref, watch } from 'vue'
-import { NAV_FOOTER, NAV_TOP, type NavRole } from '@/config/navigation'
+import { NAV_FOOTER, NAV_GROUP_LABELS, NAV_TOP, type NavGroup, type NavRole } from '@/config/navigation'
 import {
   navDepth,
   resolveCourseNavigation,
@@ -23,11 +23,31 @@ const courses = ref<CourseRow[]>([])
 function allowed(roles?: NavRole[]) {
   if (!roles?.length) return true
   const r = auth.user?.role as NavRole | undefined
-  return r ? roles.includes(r) : false
+  const extra = (auth.user?.extraRoles ?? []) as NavRole[]
+  if (r === 'MASTER' || extra.includes('MASTER')) return true
+  return (r ? roles.includes(r) : false) || extra.some((er) => roles.includes(er))
 }
 
 const navTop = computed(() => NAV_TOP.filter((i) => allowed(i.roles)))
 const navFooter = computed(() => NAV_FOOTER.filter((i) => allowed(i.roles)))
+
+type GroupedNav = { group: NavGroup | undefined; label: string; items: typeof NAV_TOP }
+
+const navTopGrouped = computed<GroupedNav[]>(() => {
+  const seen = new Map<string, GroupedNav>()
+  for (const item of navTop.value) {
+    const key = item.group ?? '__none__'
+    if (!seen.has(key)) {
+      seen.set(key, {
+        group: item.group,
+        label: item.group ? NAV_GROUP_LABELS[item.group] : '',
+        items: [],
+      })
+    }
+    seen.get(key)!.items.push(item)
+  }
+  return [...seen.values()]
+})
 
 const coursesNav = computed(() => {
   let list = courses.value
@@ -126,10 +146,13 @@ onMounted(async () => {
     </div>
 
     <nav class="sidebar-nav" aria-label="Principal">
-      <RouterLink v-for="item in navTop" :key="item.routeName" :to="{ name: item.routeName }" :class="navClass(item.routeName)">
-        <MaterialIcon :name="item.icon" :filled="isActive(item.routeName)" />
-        <span>{{ item.label }}</span>
-      </RouterLink>
+      <template v-for="group in navTopGrouped" :key="group.group ?? '__none__'">
+        <p v-if="group.label" class="nav-section__label nav-section__label--top">{{ group.label }}</p>
+        <RouterLink v-for="item in group.items" :key="item.routeName" :to="{ name: item.routeName }" :class="navClass(item.routeName)">
+          <MaterialIcon :name="item.icon" :filled="isActive(item.routeName)" />
+          <span>{{ item.label }}</span>
+        </RouterLink>
+      </template>
 
       <div class="nav-section">
         <p class="nav-section__label">Por curso</p>
@@ -174,12 +197,14 @@ onMounted(async () => {
         </details>
       </div>
 
-      <div class="sidebar-nav__divider" />
-
-      <RouterLink v-for="item in navFooter" :key="item.routeName" :to="{ name: item.routeName }" :class="navClass(item.routeName)">
-        <MaterialIcon :name="item.icon" :filled="isActive(item.routeName)" />
-        <span>{{ item.label }}</span>
-      </RouterLink>
+      <template v-if="navFooter.length">
+        <div class="sidebar-nav__divider" />
+        <p class="nav-section__label nav-section__label--top">{{ NAV_GROUP_LABELS.config }}</p>
+        <RouterLink v-for="item in navFooter" :key="item.routeName" :to="{ name: item.routeName }" :class="navClass(item.routeName)">
+          <MaterialIcon :name="item.icon" :filled="isActive(item.routeName)" />
+          <span>{{ item.label }}</span>
+        </RouterLink>
+      </template>
     </nav>
 
     <div class="sidebar-user">
@@ -248,6 +273,10 @@ onMounted(async () => {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--uf-on-surface-variant);
+}
+
+.nav-section__label--top {
+  margin-top: 0.85rem;
 }
 
 .nav-link {

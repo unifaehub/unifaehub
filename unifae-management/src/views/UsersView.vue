@@ -18,6 +18,7 @@ type UserRow = {
   name: string
   email: string
   role: string
+  extraRoles: string[]
   appId: number | null
   courseId: number | null
   app: { id: number; name: string } | null
@@ -45,7 +46,7 @@ type SpecialtyFormRow = { id: string; name: string; isPrimary: boolean }
 const auth = useAuthStore()
 const confirm = useConfirmStore()
 const toast = useToastStore()
-const isAdmin = computed(() => auth.user?.role === 'ADMIN')
+const isAdmin = computed(() => auth.user?.role === 'ADMIN' || auth.user?.role === 'MASTER')
 const isCoordinator = computed(() => auth.user?.role === 'COORDINATOR')
 /** Desativar/ativar: admin ou coordenador (escopo no backend). */
 const canToggleActive = computed(() => isAdmin.value || isCoordinator.value)
@@ -60,7 +61,8 @@ const periodError = ref<string | null>(null)
 const newName = ref('')
 const newEmail = ref('')
 const newPassword = ref('')
-const newRole = ref<'ADMIN' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'>('STUDENT')
+const newRole = ref<'MASTER' | 'ADMIN' | 'ADMIN_JORNADA' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'>('STUDENT')
+const newExtraRoles = ref<string[]>([])
 const newActive = ref(true)
 const newActiveFrom = ref<string>('')
 const newActiveUntil = ref<string>('')
@@ -81,7 +83,8 @@ const editId = ref<number | null>(null)
 const editName = ref('')
 const editEmail = ref('')
 const editPassword = ref('')
-const editRole = ref<'ADMIN' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'>('STUDENT')
+const editRole = ref<'MASTER' | 'ADMIN' | 'ADMIN_JORNADA' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'>('STUDENT')
+const editExtraRoles = ref<string[]>([])
 const editActive = ref(true)
 const editActiveFrom = ref('')
 const editActiveUntil = ref('')
@@ -270,6 +273,7 @@ async function createUser() {
       email: newEmail.value.trim(),
       password: newPassword.value,
       role: newRole.value,
+      extraRoles: newExtraRoles.value,
       active: newActive.value,
       appId: newAppId.value === '' ? undefined : newAppId.value,
       courseId: newCourseId.value === '' ? undefined : newCourseId.value,
@@ -283,6 +287,7 @@ async function createUser() {
     newEmail.value = ''
     newPassword.value = ''
     newRole.value = 'STUDENT'
+    newExtraRoles.value = []
     newActive.value = true
     newActiveFrom.value = ''
     newActiveUntil.value = ''
@@ -310,6 +315,7 @@ function openEdit(u: UserRow) {
   editEmail.value = u.email
   editPassword.value = ''
   editRole.value = u.role as typeof editRole.value
+  editExtraRoles.value = [...(u.extraRoles ?? [])]
   editAppId.value = u.appId ?? ''
   editCourseId.value = u.courseId ?? ''
   editActive.value = u.active
@@ -356,6 +362,7 @@ async function saveEdit() {
       name: editName.value.trim(),
       email: editEmail.value.trim(),
       role: editRole.value,
+      extraRoles: editExtraRoles.value,
       active: editActive.value,
       appId: editAppId.value === '' ? null : editAppId.value,
       courseId: editCourseId.value === '' ? null : editCourseId.value,
@@ -568,14 +575,25 @@ onMounted(() => {
           <input v-model="newPassword" class="in" type="password" />
         </div>
         <div class="field">
-          <label>Perfil</label>
+          <label>Perfil principal</label>
           <select v-model="newRole" class="in">
+            <option value="MASTER">Master (super admin)</option>
             <option value="ADMIN">Administrador</option>
+            <option value="ADMIN_JORNADA">Admin Jornada</option>
             <option value="COORDINATOR">Coordenador</option>
             <option value="PROFESSOR">Professor</option>
             <option value="STUDENT">Aluno</option>
             <option value="PATIENT">Paciente</option>
           </select>
+        </div>
+        <div class="field">
+          <label>Papéis adicionais</label>
+          <div class="roles-check">
+            <label v-for="r in ['MASTER','ADMIN','ADMIN_JORNADA','COORDINATOR','PROFESSOR']" :key="r" class="chk-inline">
+              <input type="checkbox" :value="r" v-model="newExtraRoles" :disabled="r === newRole" />
+              {{ r }}
+            </label>
+          </div>
         </div>
         <div class="field">
           <label>App</label>
@@ -663,14 +681,25 @@ onMounted(() => {
           <input v-model="editPassword" class="in" type="password" placeholder="Deixe em branco para manter" />
         </div>
         <div class="field">
-          <label>Perfil</label>
+          <label>Perfil principal</label>
           <select v-model="editRole" class="in">
+            <option value="MASTER">Master (super admin)</option>
             <option value="ADMIN">Administrador</option>
+            <option value="ADMIN_JORNADA">Admin Jornada</option>
             <option value="COORDINATOR">Coordenador</option>
             <option value="PROFESSOR">Professor</option>
             <option value="STUDENT">Aluno</option>
             <option value="PATIENT">Paciente</option>
           </select>
+        </div>
+        <div class="field">
+          <label>Papéis adicionais</label>
+          <div class="roles-check">
+            <label v-for="r in ['MASTER','ADMIN','ADMIN_JORNADA','COORDINATOR','PROFESSOR']" :key="r" class="chk-inline">
+              <input type="checkbox" :value="r" v-model="editExtraRoles" :disabled="r === editRole" />
+              {{ r }}
+            </label>
+          </div>
         </div>
         <div class="field">
           <label>App</label>
@@ -763,7 +792,9 @@ onMounted(() => {
           "
         >
           <option value="">Todos</option>
+          <option value="MASTER">Master</option>
           <option value="ADMIN">Administrador</option>
+          <option value="ADMIN_JORNADA">Admin Jornada</option>
           <option value="COORDINATOR">Coordenador</option>
           <option value="PROFESSOR">Professor</option>
           <option value="STUDENT">Aluno</option>
@@ -845,6 +876,7 @@ onMounted(() => {
             <td class="muted">{{ r.email }}</td>
             <td>
               <span class="tag tag--sec">{{ r.role }}</span>
+              <span v-for="er in (r.extraRoles ?? [])" :key="er" class="tag tag--extra">{{ er }}</span>
             </td>
             <td class="muted">{{ r.app?.name ?? '—' }}</td>
             <td class="muted">{{ r.course?.name ?? '—' }}</td>
@@ -1238,5 +1270,24 @@ td {
 }
 .icon-act--warn {
   color: #b3261e;
+}
+.roles-check {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.chk-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--uf-on-surface-variant);
+  cursor: pointer;
+}
+.tag--extra {
+  background: rgba(25, 118, 210, 0.1);
+  color: #1565c0;
+  margin-left: 0.25rem;
 }
 </style>

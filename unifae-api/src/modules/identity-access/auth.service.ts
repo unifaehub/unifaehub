@@ -34,6 +34,7 @@ export type AuthSessionUser = {
   name: string;
   email: string;
   role: UserRole;
+  extraRoles: UserRole[];
   appId: number | null;
   courseId: number | null;
   /** Próxima visita (agenda ou prescrição); só preenchido para `PATIENT`. */
@@ -178,6 +179,7 @@ export class AuthService {
       name: user.name,
       email: user.email,
       role: user.role,
+      extraRoles: user.extraRoles ?? [],
       appId: user.appId,
       courseId: user.courseId,
       nextVisitDate: scheduling.nextVisitDate,
@@ -217,7 +219,8 @@ export class AuthService {
     }
 
     if (dto.accessMode === LoginAccessMode.GLOBAL) {
-      if (user.role !== UserRole.ADMIN) {
+      const isSuperAdmin = user.role === UserRole.ADMIN || user.role === UserRole.MASTER;
+      if (!isSuperAdmin) {
         throw new UnauthorizedException(
           'Acesso a todos os aplicativos é exclusivo de administradores. Selecione o aplicativo ao qual você pertence.',
         );

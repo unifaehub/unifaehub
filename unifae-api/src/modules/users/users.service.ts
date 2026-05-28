@@ -191,6 +191,7 @@ export class UsersService {
       email: dto.email.trim().toLowerCase(),
       password: hash,
       role: dto.role,
+      extraRoles: dto.extraRoles?.length ? dto.extraRoles.filter((r) => r !== dto.role) : null,
       appId: dto.appId ?? null,
       courseId: dto.courseId ?? null,
       active: dto.active ?? true,
@@ -254,7 +255,8 @@ export class UsersService {
       return reloaded ? this.toDto(reloaded) : this.toDto(row);
     }
 
-    if (actor.role !== UserRole.ADMIN) {
+    const isSuperAdmin = actor.role === UserRole.ADMIN || actor.role === UserRole.MASTER;
+    if (!isSuperAdmin) {
       throw new ForbiddenException('Sem permissão para editar.');
     }
 
@@ -275,6 +277,10 @@ export class UsersService {
     }
     if (dto.name !== undefined) row.name = dto.name.trim();
     if (dto.role !== undefined) row.role = dto.role;
+    if (dto.extraRoles !== undefined) {
+      const filtered = dto.extraRoles.filter((r) => r !== row.role);
+      row.extraRoles = filtered.length ? filtered : null;
+    }
     if (dto.appId !== undefined) row.appId = dto.appId ?? null;
     if (dto.courseId !== undefined) row.courseId = dto.courseId ?? null;
     if (dto.active !== undefined) row.active = dto.active;
@@ -433,6 +439,7 @@ export class UsersService {
       name: u.name,
       email: u.email,
       role: u.role,
+      extraRoles: u.extraRoles ?? [],
       appId: u.appId,
       courseId: u.courseId,
       app: u.app ? { id: u.app.id, name: u.app.name } : null,

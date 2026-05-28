@@ -104,6 +104,10 @@ export class UserEntity {
   @Column({ name: 'curso_base', type: 'varchar', length: 200, nullable: true })
   cursoBase: string | null;
 
+  /** Papéis adicionais (ex.: professor que também é admin_jornada). Armazenado como CSV. */
+  @Column({ name: 'extra_roles', type: 'simple-array', nullable: true })
+  extraRoles: UserRole[] | null;
+
   @OneToMany(() => UserSpecialtyEntity, (specialty) => specialty.user)
   specialties: UserSpecialtyEntity[];
 }

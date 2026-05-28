@@ -3,7 +3,6 @@ import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
 import { ref, watch } from 'vue'
-import { useApiRequest } from '@/composables/useApiRequest'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
 
@@ -22,11 +21,26 @@ const confirm = useConfirmStore()
 const dataEvento = ref('')
 const running = ref(false)
 
-const { data: rooms, loading, failed, execute: reloadRooms } = useApiRequest<RoomRow[]>(async () => {
-  if (!dataEvento.value) return []
-  const { data } = await client.get(`/evidence-journey/lottery/rooms?dataEvento=${dataEvento.value}`)
-  return data
-})
+const rooms = ref<RoomRow[]>([])
+const loading = ref(false)
+const failed = ref(false)
+
+async function reloadRooms() {
+  if (!dataEvento.value) {
+    rooms.value = []
+    return
+  }
+  loading.value = true
+  failed.value = false
+  try {
+    const { data } = await client.get<RoomRow[]>(`/evidence-journey/lottery/rooms?dataEvento=${dataEvento.value}`)
+    rooms.value = data
+  } catch {
+    failed.value = true
+  } finally {
+    loading.value = false
+  }
+}
 
 watch(dataEvento, reloadRooms)
 

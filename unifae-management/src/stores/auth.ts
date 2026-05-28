@@ -11,6 +11,7 @@ export type AuthUser = {
   name: string
   email: string
   role: string
+  extraRoles: string[]
   appId: number | null
   courseId: number | null
 }
@@ -134,7 +135,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = data
       if (!loginContext.value) {
         const inferred: LoginContext =
-          data.role === 'ADMIN'
+          data.role === 'ADMIN' || data.role === 'MASTER'
             ? { mode: 'GLOBAL' }
             : data.appId != null
               ? { mode: 'APP', appId: data.appId }

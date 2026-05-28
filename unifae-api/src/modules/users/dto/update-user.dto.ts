@@ -38,6 +38,11 @@ export class UpdateUserDto {
   role?: UserRole;
 
   @IsOptional()
+  @IsArray()
+  @IsEnum(UserRole, { each: true })
+  extraRoles?: UserRole[];
+
+  @IsOptional()
   @IsInt()
   appId?: number | null;
 
