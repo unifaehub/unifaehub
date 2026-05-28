@@ -4,3 +4,5 @@ node_modules/
 client_secret*.json
 .env
 .env.*
+# .env.shared é intencionalmente versionado (vars não-secretas, iguais em todas as máquinas)
+!.env.shared

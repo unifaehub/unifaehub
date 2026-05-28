@@ -28,6 +28,9 @@ import { PatientAppointmentsModule } from './modules/patient-appointments/patien
     GoogleMeetModule,
     ConfigModule.forRoot({
       isGlobal: true,
+      // .env.shared: vars não-secretas versionadas no git (igual em todas as máquinas)
+      // .env: segredos locais — sobrepõe .env.shared em caso de chave duplicada
+      envFilePath: ['.env', '.env.shared'],
       load: [configuration],
     }),
     BullModule.forRootAsync({
