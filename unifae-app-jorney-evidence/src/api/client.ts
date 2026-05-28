@@ -1,11 +1,39 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'http://localhost:3000/api/v1';
+/**
+ * Detecta a URL base da API automaticamente:
+ * - Em DEV: usa o IP do Metro Bundler (mesmo IP da máquina de desenvolvimento)
+ *   via Constants.expoConfig.hostUri, sem precisar de .env.
+ * - Fallback: variável de ambiente EXPO_PUBLIC_API_BASE.
+ * - Porta da API: EXPO_PUBLIC_API_PORT (padrão 3000).
+ */
+function resolveApiBase(): string {
+  const port = process.env.EXPO_PUBLIC_API_PORT ?? '3000';
 
-console.log('[API] Base URL:', API_BASE);
+  if (__DEV__) {
+    // hostUri = "192.168.x.x:8081" — pegamos só o IP e trocamos a porta
+    const hostUri =
+      Constants.expoConfig?.hostUri ??
+      (Constants as any).manifest2?.launchAsset?.url ?? // Expo Go SDK 54
+      (Constants as any).manifest?.debuggerHost;        // Expo Go SDK <50
 
-export const apiClient = axios.create({ baseURL: API_BASE });
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      const url = `http://${ip}:${port}/api/v1`;
+      console.log('[API] Base URL (auto):', url);
+      return url;
+    }
+  }
+
+  // Fallback: variável de ambiente ou localhost
+  const fallback = process.env.EXPO_PUBLIC_API_BASE ?? `http://localhost:${port}/api/v1`;
+  console.log('[API] Base URL (env/fallback):', fallback);
+  return fallback;
+}
+
+export const apiClient = axios.create({ baseURL: resolveApiBase() });
 
 // ── Request interceptor ───────────────────────────────────────────────────
 apiClient.interceptors.request.use(async (config) => {
