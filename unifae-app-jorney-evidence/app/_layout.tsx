@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
-import { AuthProvider } from '../src/context/AuthContext';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
 
 const queryClient = new QueryClient();
 
@@ -10,14 +12,58 @@ const theme = {
   colors: { ...MD3LightTheme.colors, primary: '#0d631b' },
 };
 
+/** Guard de autenticação — roda DENTRO do Stack, depois do navigator estar pronto. */
+function AuthGuard() {
+  const { user, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const onLoginScreen = segments[0] === 'login';
+
+    if (!user && !onLoginScreen) {
+      router.replace('/login');
+    } else if (user && onLoginScreen) {
+      router.replace('/');
+    }
+  }, [user, isLoading, segments]);
+
+  return null;
+}
+
+/** Tela de splash enquanto restaura sessão. */
+function LoadingScreen() {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+      <ActivityIndicator size="large" color="#0d631b" />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider theme={theme}>
         <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <RootLayoutInner />
         </AuthProvider>
       </PaperProvider>
     </QueryClientProvider>
+  );
+}
+
+/** Componente interno que pode usar useAuth (está dentro do AuthProvider). */
+function RootLayoutInner() {
+  const { isLoading } = useAuth();
+
+  if (isLoading) return <LoadingScreen />;
+
+  return (
+    <>
+      <AuthGuard />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
   );
 }

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -7,10 +6,6 @@ import { useAuth } from '../src/context/AuthContext';
 
 export default function HomeScreen() {
   const { user, signOut } = useAuth();
-
-  useEffect(() => {
-    if (!user) router.replace('/login');
-  }, [user]);
 
   const { data: rooms, isLoading, refetch } = useQuery({
     queryKey: ['my-rooms'],
