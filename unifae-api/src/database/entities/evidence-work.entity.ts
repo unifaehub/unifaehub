@@ -103,6 +103,18 @@ export class EvidenceWorkEntity {
   @Column({ type: 'text', nullable: true })
   motivo: string | null;
 
+  /** Data/hora em que o motivo foi registrado. */
+  @Column({ name: 'motivo_at', type: 'datetime', nullable: true })
+  motivoAt: Date | null;
+
+  /** ID do usuário que registrou o motivo (para auditoria). */
+  @Column({ name: 'motivo_by_id', type: 'int', nullable: true })
+  motivoById: number | null;
+
+  /** Nome do usuário que registrou o motivo (snapshot para auditoria). */
+  @Column({ name: 'motivo_by_nome', type: 'varchar', length: 200, nullable: true })
+  motivoByNome: string | null;
+
   /** Seções dinâmicas do resumo (substitui os campos fixos para novos envios). */
   @Column({ name: 'resumo_secoes', type: 'json', nullable: true })
   resumoSecoes: { secao: string; conteudo: string }[] | null;

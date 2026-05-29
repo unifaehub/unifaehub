@@ -129,13 +129,29 @@ export class WorksService {
     return this.works.save(work);
   }
 
-  async moderate(dto: ModerateWorksDto): Promise<{ updated: number }> {
-    const updates: { status: EvidenceWorkStatus; motivo?: string | null } = { status: dto.status };
+  async moderate(dto: ModerateWorksDto, moderator: UserEntity): Promise<{ updated: number }> {
     const motivo = dto.motivo?.trim() ?? null;
+    const now    = new Date();
+
+    const updates: {
+      status: EvidenceWorkStatus;
+      motivo?: string | null;
+      motivoAt?: Date | null;
+      motivoById?: number | null;
+      motivoByNome?: string | null;
+    } = { status: dto.status };
+
     if (dto.status === EvidenceWorkStatus.REPROVADO && motivo) {
-      updates.motivo = motivo;
+      updates.motivo       = motivo;
+      updates.motivoAt     = now;
+      updates.motivoById   = moderator.id;
+      updates.motivoByNome = moderator.name;
     } else if (dto.status === EvidenceWorkStatus.APROVADO) {
-      updates.motivo = null;
+      // Limpa motivo anterior ao aprovar
+      updates.motivo       = null;
+      updates.motivoAt     = null;
+      updates.motivoById   = null;
+      updates.motivoByNome = null;
     }
 
     // Busca works antes de atualizar para montar os emails

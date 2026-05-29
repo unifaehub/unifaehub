@@ -78,8 +78,8 @@ export class WorksController {
 
   @Patch('moderate')
   @Roles(...JORNADA_ADMIN_ROLES)
-  moderate(@Body() dto: ModerateWorksDto) {
-    return this.service.moderate(dto);
+  moderate(@Body() dto: ModerateWorksDto, @CurrentUser() user: UserEntity) {
+    return this.service.moderate(dto, user);
   }
 
   @Delete(':id')

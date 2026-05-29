@@ -32,6 +32,8 @@ type WorkRow = {
   arquivoUrl: string | null
   tipoSubmissao: 'manual' | 'arquivo' | null
   motivo: string | null
+  motivoAt: string | null
+  motivoByNome: string | null
 }
 
 const toast = useToastStore()
@@ -43,7 +45,8 @@ const showMotivoModal = ref(false)
 const pendingModerateStatus = ref<'Aprovado' | 'Reprovado' | null>(null)
 
 // Modal de visualização de motivo na tabela
-const viewMotivo = ref<string | null>(null)
+type MotivoView = { motivo: string; motivoAt: string | null; motivoByNome: string | null }
+const viewMotivo = ref<MotivoView | null>(null)
 
 const page = ref(1)
 const limit = ref(20)
@@ -190,7 +193,13 @@ const STATUS_COLORS: Record<string, string> = {
     <div v-if="viewMotivo" class="modal-overlay" @click.self="viewMotivo = null">
       <div class="modal-box">
         <h3>Motivo da reprovação</h3>
-        <p class="motivo-body">{{ viewMotivo }}</p>
+        <p class="motivo-body">{{ viewMotivo.motivo }}</p>
+        <div class="motivo-audit">
+          <span v-if="viewMotivo.motivoByNome">👤 {{ viewMotivo.motivoByNome }}</span>
+          <span v-if="viewMotivo.motivoAt">
+            🕐 {{ new Date(viewMotivo.motivoAt).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) }}
+          </span>
+        </div>
         <div class="modal-actions">
           <button class="btn btn--secondary" @click="viewMotivo = null">Fechar</button>
         </div>
@@ -224,7 +233,8 @@ const STATUS_COLORS: Record<string, string> = {
               <td>
                 <div class="status-cell">
                   <span class="status-badge" :style="{ background: STATUS_COLORS[w.status] + '20', color: STATUS_COLORS[w.status] }">{{ w.status }}</span>
-                  <button v-if="w.motivo && w.status === 'Reprovado'" class="btn-motivo" title="Ver motivo da reprovação" @click="viewMotivo = w.motivo">💬</button>
+                  <button v-if="w.motivo && w.status === 'Reprovado'" class="btn-motivo" title="Ver motivo da reprovação"
+                    @click="viewMotivo = { motivo: w.motivo, motivoAt: w.motivoAt, motivoByNome: w.motivoByNome }">💬</button>
                 </div>
               </td>
               <td>
@@ -295,6 +305,7 @@ const STATUS_COLORS: Record<string, string> = {
 .btn-motivo { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; opacity: .75; }
 .btn-motivo:hover { opacity: 1; }
 .motivo-body { font-size: .9rem; color: #374151; line-height: 1.6; white-space: pre-wrap; margin: .5rem 0 0; }
+.motivo-audit { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .85rem; padding-top: .75rem; border-top: 1px solid #e5e7eb; font-size: .78rem; color: #6b7280; }
 .btn--secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
 .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000; }
 .modal-box { background:#fff;border-radius:12px;padding:1.5rem;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2); }
