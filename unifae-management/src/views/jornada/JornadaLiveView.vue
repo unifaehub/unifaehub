@@ -66,7 +66,14 @@ async function load() {
 
 // ── Helpers (idênticos ao RoomsView) ─────────────────────────────────────
 function roomLabel(r: RoomStatus) {
-  return r.hall ? `Sala ${r.hall.nome}` : `Sala #${r.id}`
+  if (!r.hall) return `Sala #${r.id}`
+  // Sala específica (Auditório, Lab, etc.) → mostra o nome da sala física
+  // Sala genérica (Geral) → mostra o número/nome normalmente
+  return `Sala ${r.hall.nome}`
+}
+
+function firstName(fullName: string) {
+  return fullName.split(' ')[0] ?? fullName
 }
 function overallLabel(s: EvalSection['overall']): string {
   if (s === 'completo')     return '✅ Completo'
@@ -168,7 +175,11 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           </div>
 
           <!-- Tipo de sala -->
-          <div v-if="r.tipoSala && r.tipoSala !== 'Geral'" class="room-card__tipo">{{ r.tipoSala }}</div>
+          <div
+            v-if="r.tipoSala"
+            class="room-card__tipo"
+            :class="{ 'room-card__tipo--geral': r.tipoSala === 'Geral' }"
+          >{{ r.tipoSala }}</div>
 
           <!-- Status geral -->
           <div class="room-card__geral">{{ geralLabel(r.evaluationStatus.geral) }}</div>
@@ -179,7 +190,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
               <span class="work-num">{{ rw.ordem }}.</span>
               <div>
                 <div class="work-titulo">{{ rw.trabalho?.titulo }}</div>
-                <div class="work-curso">{{ rw.trabalho?.cursoTrabalho }} · {{ rw.trabalho?.aluno?.name ?? '—' }}</div>
+                <div class="work-curso">{{ rw.trabalho?.cursoTrabalho }} · {{ rw.trabalho?.aluno ? firstName(rw.trabalho.aluno.name) : '—' }}</div>
               </div>
             </div>
           </div>
@@ -198,16 +209,16 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
             </div>
           </div>
 
-          <!-- Banca — chip verde quando professor completou todas as avaliações -->
+          <!-- Banca — apenas primeiro nome; chip verde quando completou -->
           <div class="room-card__banca-row">
             <span
               v-for="rp in r.banca"
               :key="rp.professor.id"
               class="banca-chip"
               :class="{ 'banca-chip--done': profDone(r, rp.professor.id) }"
-              :title="profDone(r, rp.professor.id) ? 'Avaliações entregues ✅' : 'Aguardando envio'"
+              :title="`${rp.professor.name}${profDone(r, rp.professor.id) ? ' — Avaliações entregues ✅' : ' — Aguardando envio'}`"
             >
-              {{ rp.professor.name }}{{ rp.professor.id === r.professorLider?.id ? ' 👑' : '' }}
+              {{ firstName(rp.professor.name) }}{{ rp.professor.id === r.professorLider?.id ? ' 👑' : '' }}
               <span v-if="profDone(r, rp.professor.id)" class="chip-check">✓</span>
             </span>
           </div>
@@ -258,7 +269,8 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .room-card__left   { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .room-card__id     { font-weight: 700; font-size: .95rem; color: #0d631b; }
 .room-card__andar  { font-size: .8rem; color: #6b7280; font-weight: 400; }
-.room-card__tipo   { font-size: .72rem; font-weight: 700; color: #5b21b6; background: #ede9fe; padding: .15rem .6rem; margin: .3rem 1rem 0; border-radius: 8px; display: inline-block; }
+.room-card__tipo          { font-size: .72rem; font-weight: 700; color: #5b21b6; background: #ede9fe; padding: .15rem .6rem; margin: .3rem 1rem 0; border-radius: 8px; display: inline-block; }
+.room-card__tipo--geral   { color: #374151; background: #f3f4f6; }
 .room-card__geral  { padding: .25rem 1rem .4rem; font-size: .8rem; color: #555; }
 
 /* Trabalhos */

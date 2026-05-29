@@ -315,6 +315,18 @@ const router = createRouter({
           meta: { searchPlaceholder: 'Estatísticas de trabalhos…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
         },
         {
+          path: 'jornada/importar-alunos',
+          name: 'jornada-import-students',
+          component: () => import('@/views/jornada/StudentImportView.vue'),
+          meta: { searchPlaceholder: 'Importar alunos…', roles: ['ADMIN', 'COORDINATOR', 'ADMIN_JORNADA'] satisfies Role[] },
+        },
+        {
+          path: 'jornada/meu-trabalho',
+          name: 'jornada-student-submission',
+          component: () => import('@/views/jornada/StudentSubmissionView.vue'),
+          meta: { searchPlaceholder: 'Meu trabalho…', roles: ['STUDENT'] satisfies Role[] },
+        },
+        {
           path: 'jornada/configuracoes',
           name: 'jornada-config',
           component: () => import('@/views/jornada/JornadaConfigView.vue'),

@@ -15,6 +15,7 @@ const sections = ref([
   { name: 'Ranking',       desc: 'Visualizar ranking final dos trabalhos',        route: 'jornada-ranking'    },
   { name: 'Configurações', desc: 'Datas, local, setores e salas do evento',       route: 'jornada-config'     },
   { name: 'Estatísticas', desc: 'Trabalhos por curso, aprovações e destaques',   route: 'jornada-stats'      },
+  { name: 'Importar Alunos', desc: 'Importar alunos via planilha Excel (RA)',   route: 'jornada-import-students' },
 ])
 
 type Config = { eventoNome: string | null; eventoLocal: string | null; datasEvento: string[] | null }

@@ -32,6 +32,8 @@ import { QuestionsController } from './controllers/questions.controller';
 import { ProfessorAvailabilityController } from './controllers/professor-availability.controller';
 import { JornadaConfigController } from './controllers/jornada-config.controller';
 import { PublicRoomsController } from './controllers/public-rooms.controller';
+import { StudentImportController } from './controllers/student-import.controller';
+import { StudentImportService } from './services/student-import.service';
 import { ReportProcessor } from './processors/report.processor';
 import { IdentityAccessModule } from '../identity-access/identity-access.module';
 import { AuditModule } from '../audit/audit.module';
@@ -69,6 +71,7 @@ import { AuditModule } from '../audit/audit.module';
     ProfessorAvailabilityController,
     JornadaConfigController,
     PublicRoomsController,
+    StudentImportController,
   ],
   providers: [
     WorksService,
@@ -80,6 +83,7 @@ import { AuditModule } from '../audit/audit.module';
     ProfessorAvailabilityService,
     JornadaConfigService,
     ReportProcessor,
+    StudentImportService,
   ],
 })
 export class EvidenceJourneyModule {}
