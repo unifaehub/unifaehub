@@ -51,6 +51,11 @@ import {
   JornadaConfigEntity,
   PresentationSectorEntity,
   PresentationHallEntity,
+  IntercursoConfigEntity,
+  IntercursoModalidadeEntity,
+  IntercursoEquipeEntity,
+  IntercursoResultadoEntity,
+  IntercursoKeywordEntity,
 } from './entities';
 
 const entities = [
@@ -102,6 +107,11 @@ const entities = [
   JornadaConfigEntity,
   PresentationSectorEntity,
   PresentationHallEntity,
+  IntercursoConfigEntity,
+  IntercursoModalidadeEntity,
+  IntercursoEquipeEntity,
+  IntercursoResultadoEntity,
+  IntercursoKeywordEntity,
 ];
 
 @Module({

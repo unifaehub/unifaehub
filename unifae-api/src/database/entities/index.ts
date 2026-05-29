@@ -47,3 +47,8 @@ export * from './keyword.entity';
 export * from './jornada-config.entity';
 export * from './presentation-sector.entity';
 export * from './presentation-hall.entity';
+export * from './intercurso-config.entity';
+export * from './intercurso-modalidade.entity';
+export * from './intercurso-equipe.entity';
+export * from './intercurso-resultado.entity';
+export * from './intercurso-keyword.entity';
