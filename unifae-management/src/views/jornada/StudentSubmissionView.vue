@@ -31,8 +31,9 @@ const tipoTrabalho  = ref('')
 // ── Modo de envio ────────────────────────────────────────────────────
 const tipoSubmissao = ref<'manual' | 'arquivo'>('arquivo')
 
-// ── Modo arquivo ─────────────────────────────────────────────────────
-const arquivo = ref<File | null>(null)
+// ── Arquivos ──────────────────────────────────────────────────────────
+const arquivo      = ref<File | null>(null)
+const apresentacao = ref<File | null>(null)
 
 // ── Config pública ───────────────────────────────────────────────────
 const secoesConfig    = ref<SecaoConfig[]>([])
@@ -183,13 +184,25 @@ function statusBg(s: string) {
 function onArquivo(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0] ?? null
   if (f && f.size > 3 * 1024 * 1024) {
-    errorMsg.value = 'O arquivo não pode ultrapassar 3 MB.'
+    errorMsg.value = 'O arquivo do resumo não pode ultrapassar 3 MB.'
     ;(e.target as HTMLInputElement).value = ''
     arquivo.value = null
     return
   }
   errorMsg.value = ''
   arquivo.value = f
+}
+
+function onApresentacao(e: Event) {
+  const f = (e.target as HTMLInputElement).files?.[0] ?? null
+  if (f && f.size > 10 * 1024 * 1024) {
+    errorMsg.value = 'O arquivo de apresentação não pode ultrapassar 10 MB.'
+    ;(e.target as HTMLInputElement).value = ''
+    apresentacao.value = null
+    return
+  }
+  errorMsg.value = ''
+  apresentacao.value = f
 }
 
 // ── Lookup de RA ─────────────────────────────────────────────────────
@@ -289,6 +302,9 @@ async function submitWork() {
     form.append('tipoSubmissao', tipoSubmissao.value)
     if (tipoTrabalho.value) form.append('tipoTrabalho', tipoTrabalho.value)
 
+    // Apresentação sempre opcional, em qualquer modo
+    if (apresentacao.value) form.append('apresentacao', apresentacao.value)
+
     if (tipoSubmissao.value === 'arquivo') {
       if (arquivo.value) form.append('arquivo', arquivo.value)
     } else {
@@ -310,7 +326,7 @@ async function submitWork() {
     })
     myWork.value = data; hasWork.value = true
     // Limpar
-    titulo.value = ''; cursoTrabalho.value = ''; tipoTrabalho.value = ''; arquivo.value = null
+    titulo.value = ''; cursoTrabalho.value = ''; tipoTrabalho.value = ''; arquivo.value = null; apresentacao.value = null
     orientadorId.value = ''; orientadorNome.value = ''; orientadorEmail.value = ''
     coorientadores.value = []
     palavrasChave.value = ''; referencias.value = ''
@@ -610,6 +626,21 @@ async function submitWork() {
               placeholder="SOBRENOME, Nome. Título da obra. Local: Editora, Ano." :disabled="submitting" />
           </div>
         </template>
+
+        <!-- Apresentação — opcional em qualquer modo -->
+        <div class="apresentacao-block">
+          <div class="manual-divider">Arquivo de apresentação <span class="field-hint" style="font-size:.75rem;text-transform:none;letter-spacing:0">(opcional)</span></div>
+          <p class="section-desc">Slides, PDF ou outro material que auxilie os avaliadores durante a apresentação. Máx. 10 MB.</p>
+          <div class="form-group">
+            <input type="file" accept=".pdf,.ppt,.pptx,.key,.odp" @change="onApresentacao" class="file-input-native" :disabled="submitting" />
+            <p class="file-hint" v-if="apresentacao">📎 {{ apresentacao.name }}</p>
+          </div>
+        </div>
+
+        <!-- Aviso de notificações -->
+        <div class="notify-info">
+          📧 Ao submeter, um e-mail de confirmação será enviado automaticamente para todos os integrantes, orientador(es) e coordenação.
+        </div>
       </section>
 
       <button class="btn btn--primary" :disabled="submitting || !primaryIdentified()" @click="submitWork">
@@ -706,6 +737,8 @@ async function submitWork() {
 .alert { padding: .65rem 1rem; border-radius: 8px; font-size: .88rem; font-weight: 600; margin-bottom: 1rem; }
 .alert--ok   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .alert--err  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.apresentacao-block { margin-top: .25rem; }
+.notify-info { font-size: .82rem; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: .6rem .9rem; margin-top: .75rem; }
 .alert--warn { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
 .motivo-text { font-size: .85rem; color: #991b1b; margin: .5rem 0 0; background: #fee2e2; padding: .4rem .65rem; border-radius: 6px; }
 .history-list { display: flex; flex-direction: column; gap: .5rem; }

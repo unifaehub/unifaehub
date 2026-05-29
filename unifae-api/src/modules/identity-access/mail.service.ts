@@ -165,6 +165,28 @@ export class MailService {
     });
   }
 
+  /** Envia um e-mail HTML genérico. Silencioso em dev (SMTP não configurado). */
+  async sendHtml(params: {
+    to: string | string[];
+    bcc?: string[];
+    subject: string;
+    html: string;
+  }): Promise<void> {
+    if (!this.isConfigured()) {
+      this.logger.warn(`[dev] SMTP não configurado — e-mail não enviado: ${params.subject}`);
+      return;
+    }
+    const mail = this.config.get<{ from: string }>('mail');
+    const toArr = Array.isArray(params.to) ? params.to : [params.to];
+    await this.getTransporter().sendMail({
+      from: mail?.from ?? 'UNIFAE Hub',
+      to: toArr[0],
+      bcc: [...(toArr.slice(1)), ...(params.bcc ?? [])],
+      subject: params.subject,
+      html: params.html,
+    });
+  }
+
   private escapeHtml(s: string): string {
     return s
       .replace(/&/g, '&amp;')

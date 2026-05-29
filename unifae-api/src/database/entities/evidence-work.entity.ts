@@ -44,6 +44,10 @@ export class EvidenceWorkEntity {
   @Column({ name: 'arquivo_url', type: 'varchar', length: 1024, nullable: true })
   arquivoUrl: string | null;
 
+  /** Arquivo de apresentação (opcional — PPT, PDF etc.). */
+  @Column({ name: 'apresentacao_url', type: 'varchar', length: 1024, nullable: true })
+  apresentacaoUrl: string | null;
+
   @Column({ type: 'enum', enum: EvidenceWorkStatus, default: EvidenceWorkStatus.PENDENTE })
   status: EvidenceWorkStatus;
 

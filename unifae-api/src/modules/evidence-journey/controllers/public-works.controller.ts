@@ -1,5 +1,5 @@
-import { BadRequestException, Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { BadRequestException, Body, Controller, Get, Param, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { WorksService } from '../services/works.service';
 import { JornadaConfigService } from '../services/jornada-config.service';
@@ -47,7 +47,10 @@ export class PublicWorksController {
   /** Submete ou resubmete um trabalho sem necessidade de login. */
   @Post('works')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: MAX_FILE_BYTES } }))
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'arquivo',      maxCount: 1 },
+    { name: 'apresentacao', maxCount: 1 },
+  ], { limits: { fileSize: 10 * 1024 * 1024 } })) // 10 MB total por arquivo
   submit(
     @Body() body: {
       ras: string | string[];
@@ -56,9 +59,7 @@ export class PublicWorksController {
       categoria: string;
       tipoTrabalho?: string;
       tipoSubmissao?: 'manual' | 'arquivo';
-      /** JSON string: { professorId?: number; nome: string; email: string } */
       orientador?: string;
-      /** JSON string: array de co-orientadores */
       coorientadores?: string;
       resumoIntroducao?: string;
       resumoObjetivos?: string;
@@ -69,16 +70,22 @@ export class PublicWorksController {
       palavrasChave?: string;
       referencias?: string;
     },
-    @UploadedFile() file?: UploadedMulterFile,
+    @UploadedFiles() files?: { arquivo?: UploadedMulterFile[]; apresentacao?: UploadedMulterFile[] },
   ) {
     const ras = Array.isArray(body.ras)
       ? body.ras
       : String(body.ras ?? '').split(',').map((r) => r.trim()).filter(Boolean);
 
-    if (file && file.size > MAX_FILE_BYTES) {
-      throw new BadRequestException('O arquivo não pode ultrapassar 3 MB.');
+    const arquivo      = files?.arquivo?.[0];
+    const apresentacao = files?.apresentacao?.[0];
+
+    if (arquivo && arquivo.size > MAX_FILE_BYTES) {
+      throw new BadRequestException('O arquivo do resumo não pode ultrapassar 3 MB.');
+    }
+    if (apresentacao && apresentacao.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('O arquivo de apresentação não pode ultrapassar 10 MB.');
     }
 
-    return this.works.publicSubmit({ ...body, ras }, file);
+    return this.works.publicSubmit({ ...body, ras }, arquivo, apresentacao);
   }
 }

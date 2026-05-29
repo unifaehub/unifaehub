@@ -36,6 +36,7 @@ import { PublicWorksController } from './controllers/public-works.controller';
 import { StudentImportController } from './controllers/student-import.controller';
 import { StudentImportService } from './services/student-import.service';
 import { EvidenceWorkDocxService } from './services/evidence-work-docx.service';
+import { EvidenceJourneyMailService } from './services/evidence-journey-mail.service';
 import { ReportProcessor } from './processors/report.processor';
 import { IdentityAccessModule } from '../identity-access/identity-access.module';
 import { AuditModule } from '../audit/audit.module';
@@ -88,6 +89,7 @@ import { AuditModule } from '../audit/audit.module';
     ReportProcessor,
     StudentImportService,
     EvidenceWorkDocxService,
+    EvidenceJourneyMailService,
   ],
 })
 export class EvidenceJourneyModule {}

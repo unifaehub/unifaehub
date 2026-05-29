@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 import { EvidenceWorkDocxService } from './evidence-work-docx.service';
 import { JornadaConfigService } from './jornada-config.service';
+import { EvidenceJourneyMailService } from './evidence-journey-mail.service';
 
 type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: string; size: number };
 
@@ -32,6 +33,7 @@ export class WorksService {
     private readonly config: ConfigService,
     private readonly docxGen: EvidenceWorkDocxService,
     private readonly configService: JornadaConfigService,
+    private readonly mailer: EvidenceJourneyMailService,
   ) {}
 
   async list(params: {
@@ -125,16 +127,44 @@ export class WorksService {
 
   async moderate(dto: ModerateWorksDto): Promise<{ updated: number }> {
     const updates: Partial<EvidenceWorkEntity> = { status: dto.status };
-    if (dto.status === EvidenceWorkStatus.REPROVADO && dto.motivo?.trim()) {
-      updates.motivo = dto.motivo.trim();
+    const motivo = dto.motivo?.trim() ?? null;
+    if (dto.status === EvidenceWorkStatus.REPROVADO && motivo) {
+      updates.motivo = motivo;
     } else if (dto.status === EvidenceWorkStatus.APROVADO) {
       updates.motivo = null;
     }
+
+    // Busca works antes de atualizar para montar os emails
+    const worksToNotify = await this.works.find({
+      where: { id: In(dto.ids), deletedAt: IsNull() },
+      relations: ['aluno'],
+    });
+
     const result = await this.works.update(
       { id: In(dto.ids), deletedAt: IsNull() },
       updates,
     );
+
+    // Envia emails em background (não bloqueia a resposta)
+    this.sendModerationEmails(worksToNotify, dto.status, motivo).catch(() => {});
+
     return { updated: result.affected ?? 0 };
+  }
+
+  private async sendModerationEmails(
+    works: EvidenceWorkEntity[],
+    status: EvidenceWorkStatus,
+    motivo: string | null,
+  ): Promise<void> {
+    for (const work of works) {
+      const emails = await this.buildWorkEmails(work);
+      const data = this.buildWorkEmailData(work);
+      if (status === EvidenceWorkStatus.APROVADO) {
+        await this.mailer.notifyApproval(data, emails.recipients);
+      } else if (status === EvidenceWorkStatus.REPROVADO && motivo) {
+        await this.mailer.notifyRejection(data, emails.recipients, motivo);
+      }
+    }
   }
 
   async softDelete(id: number): Promise<void> {
@@ -195,21 +225,19 @@ export class WorksService {
       categoria: string;
       tipoTrabalho?: string;
       tipoSubmissao?: 'manual' | 'arquivo';
-      /** JSON string: { professorId?: number; nome: string; email: string } */
       orientador?: string;
-      /** JSON string: { tipo:'interno'|'externo'; professorId?:number; nome:string; email:string }[] */
       coorientadores?: string;
       resumoIntroducao?: string;
       resumoObjetivos?: string;
       resumoMetodo?: string;
       resumoResultados?: string;
       resumoConclusoes?: string;
-      /** JSON string: { secao: string; conteudo: string }[] */
       resumoSecoes?: string;
       palavrasChave?: string;
       referencias?: string;
     },
     file?: UploadedMulterFile,
+    apresentacaoFile?: UploadedMulterFile,
   ) {
     if (!dto.ras?.length) throw new BadRequestException('Informe ao menos um RA.');
 
@@ -319,12 +347,17 @@ export class WorksService {
       arquivoUrl = this.saveBuffer(buffer, primary.id, 'resumo.docx');
     }
 
+    const apresentacaoUrl = apresentacaoFile
+      ? this.saveFile(apresentacaoFile, primary.id, 'apresentacao')
+      : null;
+
     const work = this.works.create({
       titulo:            dto.titulo,
       cursoTrabalho:     dto.cursoTrabalho,
       categoria:         (dto.categoria as WorkCategory) ?? WorkCategory.JORNADA_EVIDENCIAS,
       tipoTrabalho:      (dto.tipoTrabalho as WorkType) ?? null,
       arquivoUrl,
+      apresentacaoUrl,
       status:            EvidenceWorkStatus.PENDENTE,
       dataSubmissao:     new Date(),
       alunoId:           primary.id,
@@ -342,7 +375,62 @@ export class WorksService {
       referencias:       dto.referencias?.trim()      ?? null,
     });
     const saved = await this.works.save(work);
+
+    // Dispara emails em background
+    this.sendSubmissionEmails(saved, primary, extras, orientadorParsed, coorientadoresParsed).catch(() => {});
+
     return { ...saved, alunoNome: primary.name };
+  }
+
+  private async sendSubmissionEmails(
+    work: EvidenceWorkEntity,
+    primary: UserEntity,
+    extras: { email?: string; nome: string }[],
+    orientador: { nome: string; email: string } | null,
+    coorientadores: { nome: string; email: string }[],
+  ): Promise<void> {
+    const recipientEmails = [
+      primary.email,
+      ...extras.map((e) => e.email).filter(Boolean) as string[],
+      ...(orientador?.email ? [orientador.email] : []),
+      ...coorientadores.map((c) => c.email).filter(Boolean),
+    ];
+
+    const coordinators = await this.users.find({
+      where: { role: In([UserRole.ADMIN, UserRole.COORDINATOR, 'ADMIN_JORNADA'] as any), deletedAt: IsNull() },
+      select: ['email'],
+    });
+    const coordinatorEmails = coordinators.map((u) => u.email).filter(Boolean);
+
+    const data = this.buildWorkEmailData(work);
+    await this.mailer.notifySubmission(data, recipientEmails, coordinatorEmails);
+  }
+
+  private buildWorkEmailData(work: EvidenceWorkEntity) {
+    const autores = [
+      work.aluno?.name ?? `aluno #${work.alunoId}`,
+      ...(work.integrantes ?? []).map((i) => i.nome),
+    ];
+    return {
+      titulo:         work.titulo,
+      categoria:      work.categoria,
+      cursoTrabalho:  work.cursoTrabalho,
+      autores,
+      orientador:     work.orientador?.nome,
+      coorientadores: work.coorientadores?.map((c) => c.nome),
+      dataSubmissao:  work.dataSubmissao,
+    };
+  }
+
+  private async buildWorkEmails(work: EvidenceWorkEntity) {
+    const primary = await this.users.findOne({ where: { id: work.alunoId } });
+    const recipients = [
+      primary?.email,
+      ...(work.integrantes ?? []).map((i) => i.email).filter(Boolean) as string[],
+      ...(work.orientador?.email ? [work.orientador.email] : []),
+      ...(work.coorientadores ?? []).map((c) => c.email).filter(Boolean),
+    ].filter(Boolean) as string[];
+    return { recipients };
   }
 
   /** Histórico de todos os envios do aluno pelo RA. */
@@ -380,7 +468,7 @@ export class WorksService {
   private saveBuffer(buffer: Buffer, alunoId: number, filename: string): string {
     const uploadRoot =
       this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
-    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId));
+    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId), 'resumo');
     fs.mkdirSync(dir, { recursive: true });
     const fname = `${Date.now()}-${filename}`;
     const filePath = path.join(dir, fname);
@@ -388,10 +476,10 @@ export class WorksService {
     return filePath;
   }
 
-  private saveFile(file: UploadedMulterFile, alunoId: number): string {
+  private saveFile(file: UploadedMulterFile, alunoId: number, subfolder = 'resumo'): string {
     const uploadRoot =
       this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
-    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId));
+    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId), subfolder);
     fs.mkdirSync(dir, { recursive: true });
     const filename = `${Date.now()}-${file.originalname}`;
     const filePath = path.join(dir, filename);
