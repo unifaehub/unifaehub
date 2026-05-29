@@ -172,16 +172,32 @@ export class WorksService {
     return { total, aprovados, reprovados, pendentes, inativos, porCurso, destaquesPorCurso };
   }
 
-  /** Submissão pública sem login — identifica o aluno pelo RA. */
+  /**
+   * Submissão pública sem login.
+   * `ras` é um array de RAs dos integrantes do grupo — o primeiro é o responsável principal.
+   */
   async publicSubmit(
-    dto: { ra: string; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
+    dto: { ras: string[]; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
     file?: UploadedMulterFile,
   ) {
-    const student = await this.users.findOne({ where: { ra: dto.ra, deletedAt: IsNull() } });
-    if (!student) throw new NotFoundException('Aluno não encontrado. Verifique o RA informado.');
+    if (!dto.ras?.length) throw new BadRequestException('Informe ao menos um RA.');
+
+    const primaryRa = dto.ras[0]!.trim();
+    const primary = await this.users.findOne({ where: { ra: primaryRa, deletedAt: IsNull() } });
+    if (!primary) throw new NotFoundException(`Aluno não encontrado para o RA ${primaryRa}.`);
+
+    // Resolve integrantes adicionais
+    const extras: { ra: string; nome: string }[] = [];
+    for (const ra of dto.ras.slice(1)) {
+      const trimmed = ra.trim();
+      if (!trimmed) continue;
+      const u = await this.users.findOne({ where: { ra: trimmed, deletedAt: IsNull() } });
+      if (!u) throw new NotFoundException(`Aluno não encontrado para o RA ${trimmed}.`);
+      extras.push({ ra: trimmed, nome: u.name });
+    }
 
     const existing = await this.works.findOne({
-      where: { alunoId: student.id, deletedAt: IsNull() },
+      where: { alunoId: primary.id, deletedAt: IsNull() },
       order: { dataSubmissao: 'DESC' },
     });
 
@@ -195,7 +211,7 @@ export class WorksService {
       );
     }
 
-    const arquivoUrl = file ? this.saveFile(file, student.id) : null;
+    const arquivoUrl = file ? this.saveFile(file, primary.id) : null;
     const work = this.works.create({
       titulo:        dto.titulo,
       cursoTrabalho: dto.cursoTrabalho,
@@ -204,10 +220,11 @@ export class WorksService {
       arquivoUrl,
       status:        EvidenceWorkStatus.PENDENTE,
       dataSubmissao: new Date(),
-      alunoId:       student.id,
+      alunoId:       primary.id,
+      integrantes:   extras.length ? extras : null,
     });
     const saved = await this.works.save(work);
-    return { ...saved, alunoNome: student.name };
+    return { ...saved, alunoNome: primary.name };
   }
 
   /** Consulta pública do trabalho de um aluno pelo RA. */

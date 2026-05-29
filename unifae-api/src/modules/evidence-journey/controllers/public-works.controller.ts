@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { WorksService } from '../services/works.service';
 
 type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: string; size: number };
+
+const MAX_FILE_BYTES = 3 * 1024 * 1024; // 3 MB
 
 /**
  * Endpoints públicos (sem autenticação) para submissão de trabalhos.
@@ -23,11 +25,20 @@ export class PublicWorksController {
   /** Submete ou resubmete um trabalho sem necessidade de login. */
   @Post('works')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: MAX_FILE_BYTES } }))
   submit(
-    @Body() dto: { ra: string; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
+    @Body() body: { ras: string | string[]; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
     @UploadedFile() file?: UploadedMulterFile,
   ) {
-    return this.works.publicSubmit(dto, file);
+    // FormData envia arrays como campo repetido ou como string separada por vírgula
+    const ras = Array.isArray(body.ras)
+      ? body.ras
+      : String(body.ras ?? '').split(',').map((r) => r.trim()).filter(Boolean);
+
+    if (file && file.size > MAX_FILE_BYTES) {
+      throw new BadRequestException('O arquivo não pode ultrapassar 3 MB.');
+    }
+
+    return this.works.publicSubmit({ ...body, ras }, file);
   }
 }

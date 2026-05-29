@@ -57,6 +57,10 @@ export class EvidenceWorkEntity {
   @JoinColumn({ name: 'aluno_id' })
   aluno: UserEntity;
 
+  /** Integrantes adicionais do grupo (além do aluno principal). */
+  @Column({ type: 'json', nullable: true })
+  integrantes: { ra: string; nome: string }[] | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

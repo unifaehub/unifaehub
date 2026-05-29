@@ -55,7 +55,7 @@ export class WorksController {
   @Post()
   @Roles(...JORNADA_ADMIN_ROLES, UserRole.STUDENT)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 3 * 1024 * 1024 } }))
   create(
     @Body() dto: CreateWorkDto,
     @CurrentUser() user: UserEntity,
@@ -67,7 +67,7 @@ export class WorksController {
   @Post('resubmit')
   @Roles(UserRole.STUDENT)
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 3 * 1024 * 1024 } }))
   resubmit(
     @Body() dto: CreateWorkDto,
     @CurrentUser() user: UserEntity,

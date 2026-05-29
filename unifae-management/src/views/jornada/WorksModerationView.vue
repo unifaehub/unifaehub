@@ -12,6 +12,16 @@ import type { Paged } from '@/types/pagination'
 
 const router = useRouter()
 
+const submissionUrl = `${window.location.origin}/jornada/submissao`
+const submissionLinkCopied = ref(false)
+async function copySubmissionLink() {
+  try {
+    await navigator.clipboard.writeText(submissionUrl)
+    submissionLinkCopied.value = true
+    setTimeout(() => { submissionLinkCopied.value = false }, 2500)
+  } catch { /* fallback manual */ }
+}
+
 type WorkRow = {
   id: number
   titulo: string
@@ -116,6 +126,20 @@ const STATUS_COLORS: Record<string, string> = {
       </div>
     </div>
 
+    <!-- ── Link público de submissão ─────────────────────────────────── -->
+    <div class="public-link-card" @click="copySubmissionLink" title="Clique para copiar o link">
+      <div class="plc-left">
+        <span class="plc-icon">📝</span>
+        <div>
+          <p class="plc-title">Link público — Submissão de trabalhos</p>
+          <p class="plc-url">{{ submissionUrl }}</p>
+        </div>
+      </div>
+      <span class="plc-action" :class="{ 'plc-action--copied': submissionLinkCopied }">
+        {{ submissionLinkCopied ? '✅ Copiado!' : '📋 Copiar' }}
+      </span>
+    </div>
+
     <UiConnectionRetry v-if="failed" @retry="execute" />
 
     <UiAsyncPanel :loading="loading">
@@ -142,7 +166,7 @@ const STATUS_COLORS: Record<string, string> = {
               <td>
                 <span class="status-badge" :style="{ background: STATUS_COLORS[w.status] + '20', color: STATUS_COLORS[w.status] }">{{ w.status }}</span>
               </td>
-              <td>{{ new Date(w.dataSubmissao).toLocaleDateString('pt-BR') }}</td>
+              <td>{{ new Date(w.dataSubmissao).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</td>
               <td>
                 <a v-if="w.arquivoUrl" :href="w.arquivoUrl" target="_blank" class="link-pdf">PDF</a>
                 <span v-else class="text-muted">—</span>
@@ -187,4 +211,15 @@ const STATUS_COLORS: Record<string, string> = {
 .btn--danger { background: #dc2626; color: #fff; }
 .btn-icon-sm { background: none; border: none; cursor: pointer; font-size: 1rem; padding: .1rem .3rem; }
 .text-muted { color: #9ca3af; }
+
+.public-link-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: .75rem 1rem;
+  cursor: pointer; margin-bottom: 1rem; transition: background .15s; }
+.public-link-card:hover { background: #dcfce7; }
+.plc-left  { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.plc-icon  { font-size: 1.4rem; flex-shrink: 0; }
+.plc-title { font-size: .85rem; font-weight: 700; color: #166534; margin: 0 0 .2rem; }
+.plc-url   { font-size: .78rem; color: #166534; opacity: .75; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
+.plc-action { font-size: .82rem; font-weight: 700; color: #166534; white-space: nowrap; padding: .3rem .75rem; border: 1.5px solid #86efac; border-radius: 20px; flex-shrink: 0; }
+.plc-action--copied { background: #16a34a; color: #fff; border-color: #16a34a; }
 </style>
