@@ -11,39 +11,34 @@ const router  = useRouter()
 const toast   = useToastStore()
 const confirm = useConfirmStore()
 
-// ── Tipos de sala disponíveis ─────────────────────────────────────────────
-type TipoSala = 'Geral' | 'Mostra de Jogos' | 'Desenvolvimento Prático' | 'Artigo / TCC' | 'Iniciação Científica'
-const TIPOS_SALA: { value: TipoSala; label: string; maxPadrao: number; hint: string }[] = [
-  { value: 'Geral',                   label: 'Geral',                   maxPadrao: 10, hint: 'Aceita todos os tipos de trabalho' },
-  { value: 'Mostra de Jogos',         label: 'Mostra de Jogos',         maxPadrao: 10, hint: 'Somente trabalhos de Mostra de Jogos (ex.: auditório)' },
-  { value: 'Desenvolvimento Prático', label: 'Desenvolvimento Prático', maxPadrao:  5, hint: 'Demanda mais tempo — máx 5 trabalhos por padrão' },
-  { value: 'Artigo / TCC',            label: 'Artigo / TCC',            maxPadrao: 10, hint: 'Trabalhos de TCC e Pesquisa' },
-  { value: 'Iniciação Científica',    label: 'Iniciação Científica',    maxPadrao: 10, hint: 'Trabalhos de IC' },
-]
-
-type TipoConfig = { tipo: TipoSala; quantidade: number; maxTrabalhos: number }
-const usarTiposSala  = ref(false)
-const tiposConfig    = ref<TipoConfig[]>([])
-
-function addTipo() {
-  const tipo = TIPOS_SALA[0]!
-  tiposConfig.value.push({ tipo: tipo.value, quantidade: 1, maxTrabalhos: tipo.maxPadrao })
+// ── Preview automático ────────────────────────────────────────────────────
+type PreviewItem = { tipo: string; trabalhos: number; salas: number; capacidade: number }
+type Preview = {
+  totalWorks: number
+  profsDisponiveis: number
+  totalSalasNecessarias: number
+  hallsConfiguradas: number
+  porTipo: PreviewItem[]
 }
-function removeTipo(idx: number) {
-  tiposConfig.value.splice(idx, 1)
-}
-function onTipoChange(idx: number) {
-  const cfg = tiposConfig.value[idx]
-  if (!cfg) return
-  const found = TIPOS_SALA.find((t) => t.value === cfg.tipo)
-  if (found) cfg.maxTrabalhos = found.maxPadrao
+const preview        = ref<Preview | null>(null)
+const loadingPreview = ref(false)
+
+async function loadPreview() {
+  if (!dataEvento.value) { preview.value = null; return }
+  loadingPreview.value = true
+  try {
+    const { data } = await client.get<Preview>(`/evidence-journey/lottery/preview?dataEvento=${dataEvento.value}`)
+    preview.value = data
+  } catch { preview.value = null }
+  finally { loadingPreview.value = false }
 }
 
 // ── Salas ─────────────────────────────────────────────────────────────────
 type RoomRow = {
   id: number
   dataEvento: string
-  tipoSala: TipoSala | null
+  tipoSala: string | null
+  hall: { nome: string; andar: string | null } | null
   professorLider: { id: number; name: string }
   banca: { professor: { id: number; name: string } }[]
   works: { id: number; ordem: number; trabalho: { id: number; titulo: string; cursoTrabalho: string; aluno: { name: string } | null } }[]
@@ -69,7 +64,7 @@ async function reloadRooms() {
   }
 }
 
-watch(dataEvento, reloadRooms)
+watch(dataEvento, () => { reloadRooms(); loadPreview() })
 
 async function runLottery() {
   if (!dataEvento.value) { toast.error('Informe a data do evento.'); return }
@@ -84,13 +79,10 @@ async function runLottery() {
 
   running.value = true
   try {
-    const payload: { dataEvento: string; tiposSala?: TipoConfig[] } = { dataEvento: dataEvento.value }
-    if (usarTiposSala.value && tiposConfig.value.length) {
-      payload.tiposSala = tiposConfig.value
-    }
-    const { data } = await client.post('/evidence-journey/lottery/run', payload)
+    const { data } = await client.post('/evidence-journey/lottery/run', { dataEvento: dataEvento.value })
     toast.success(data.message ?? `Sorteio concluído: ${data.roomsCreated} sala(s).`)
     reloadRooms()
+    loadPreview()
   } catch (err: any) {
     toast.error(err?.response?.data?.message ?? 'Erro ao executar sorteio.')
   } finally {
@@ -116,37 +108,57 @@ async function runLottery() {
       </button>
     </div>
 
-    <!-- ── Configuração de tipos de sala (opcional) ──────────────────────── -->
-    <div class="tipos-card">
-      <div class="tipos-header" @click="usarTiposSala = !usarTiposSala">
-        <span class="tipos-title">⚙️ Configuração de tipos de sala</span>
-        <span class="tipos-toggle">{{ usarTiposSala ? '▲ Ocultar' : '▼ Expandir' }}</span>
+    <!-- ── Preview automático ────────────────────────────────────────────── -->
+    <div v-if="dataEvento" class="preview-card">
+      <div class="preview-header">
+        <span class="preview-title">📊 Cálculo automático</span>
+        <span v-if="loadingPreview" class="preview-loading">Calculando…</span>
       </div>
 
-      <div v-if="usarTiposSala" class="tipos-body">
-        <p class="tipos-hint">
-          Configure como os trabalhos serão distribuídos por tipo de sala.
-          Se não configurado, todos os trabalhos são distribuídos em salas <strong>Geral</strong> (máx 10 por sala).
-        </p>
-
-        <div v-for="(cfg, idx) in tiposConfig" :key="idx" class="tipo-row">
-          <select v-model="cfg.tipo" class="select-field" @change="onTipoChange(idx)">
-            <option v-for="t in TIPOS_SALA" :key="t.value" :value="t.value">{{ t.label }}</option>
-          </select>
-          <div class="tipo-sub">
-            <label class="sub-label">Qtd de salas</label>
-            <input v-model.number="cfg.quantidade" type="number" min="1" max="20" class="input-field input-sm" />
+      <template v-if="preview && !loadingPreview">
+        <div class="preview-summary">
+          <div class="ps-item">
+            <span class="ps-num">{{ preview.totalWorks }}</span>
+            <span class="ps-label">Trabalhos aprovados</span>
           </div>
-          <div class="tipo-sub">
-            <label class="sub-label">Máx trabalhos/sala</label>
-            <input v-model.number="cfg.maxTrabalhos" type="number" min="1" max="20" class="input-field input-sm" />
+          <div class="ps-item">
+            <span class="ps-num">{{ preview.totalSalasNecessarias }}</span>
+            <span class="ps-label">Salas necessárias</span>
           </div>
-          <span class="tipo-hint">{{ TIPOS_SALA.find(t => t.value === cfg.tipo)?.hint }}</span>
-          <button class="btn-icon-danger" @click="removeTipo(idx)" title="Remover">×</button>
+          <div class="ps-item">
+            <span class="ps-num">{{ preview.hallsConfiguradas }}</span>
+            <span class="ps-label">Salas cadastradas</span>
+          </div>
+          <div class="ps-item">
+            <span class="ps-num">{{ preview.profsDisponiveis }}</span>
+            <span class="ps-label">Profs disponíveis</span>
+          </div>
         </div>
 
-        <button class="btn btn--outline btn--sm" @click="addTipo">+ Adicionar tipo de sala</button>
-      </div>
+        <div v-if="preview.porTipo.length" class="preview-table-wrap">
+          <table class="preview-table">
+            <thead>
+              <tr><th>Tipo</th><th>Trabalhos</th><th>Salas usadas</th><th>Capacidade total</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in preview.porTipo" :key="row.tipo">
+                <td><span class="tipo-badge">{{ row.tipo }}</span></td>
+                <td>{{ row.trabalhos }}</td>
+                <td>{{ row.salas }}</td>
+                <td :class="{ 'cap-warn': row.capacidade < row.trabalhos }">
+                  {{ row.capacidade > 0 ? row.capacidade : '∞ (virtual)' }}
+                  <span v-if="row.capacidade < row.trabalhos && row.capacidade > 0" class="warn-icon" title="Capacidade insuficiente — adicione mais salas deste tipo">⚠️</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-if="preview.hallsConfiguradas === 0" class="preview-hint">
+          ℹ️ Nenhuma sala física cadastrada. O sorteio criará salas virtuais automaticamente.
+          Configure salas em <strong>Configurações → Setores e Salas</strong> para melhor controle.
+        </p>
+      </template>
     </div>
 
     <div v-if="rooms?.length" class="lottery-view__summary">
@@ -165,7 +177,10 @@ async function runLottery() {
       <div v-else class="rooms-grid">
         <div v-for="r in rooms ?? []" :key="r.id" class="room-card" :class="{ 'room-card--closed': r.fechada }">
           <div class="room-card__header">
-            <span class="room-card__id">Sala #{{ r.id }}</span>
+            <div>
+              <span class="room-card__id">Sala #{{ r.id }}</span>
+              <span v-if="r.hall" class="room-card__hall">{{ r.hall.nome }}{{ r.hall.andar ? ` · ${r.hall.andar}` : '' }}</span>
+            </div>
             <div class="room-card__badges">
               <span v-if="r.tipoSala && r.tipoSala !== 'Geral'" class="badge badge--tipo">{{ r.tipoSala }}</span>
               <span v-if="r.fechada" class="badge badge--closed">Fechada</span>
@@ -208,35 +223,36 @@ async function runLottery() {
 .lottery-view__summary { margin-bottom: 1rem; }
 .label { font-size: .8rem; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: .3rem; }
 .input-field { padding: .45rem .75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem; }
-.input-sm { width: 70px; }
-.select-field { padding: .45rem .75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem; flex: 1; min-width: 160px; }
 .btn { padding: .5rem 1.1rem; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; font-weight: 600; }
 .btn--primary { background: var(--color-primary, #0d631b); color: #fff; }
-.btn--outline { background: #fff; border: 1px solid #d1d5db; }
-.btn--sm { font-size: .8rem; padding: .3rem .7rem; margin-top: .75rem; }
 .btn:disabled { opacity: .6; cursor: not-allowed; }
 
-/* Tipos de sala */
-.tipos-card { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
-.tipos-header { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; cursor: pointer; background: #f9fafb; user-select: none; }
-.tipos-title { font-size: .9rem; font-weight: 600; }
-.tipos-toggle { font-size: .8rem; color: #6b7280; }
-.tipos-body { padding: 1rem; background: #fff; }
-.tipos-hint { font-size: .83rem; color: #6b7280; margin: 0 0 .75rem; }
-.tipo-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .5rem 0; border-bottom: 1px solid #f3f4f6; }
-.tipo-row:last-of-type { border-bottom: none; }
-.tipo-sub { display: flex; flex-direction: column; gap: .2rem; }
-.sub-label { font-size: .72rem; font-weight: 600; color: #6b7280; white-space: nowrap; }
-.tipo-hint { flex: 1; font-size: .78rem; color: #9ca3af; min-width: 120px; }
-.btn-icon-danger { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #dc2626; font-weight: 700; padding: 0 .3rem; }
+/* Preview */
+.preview-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; background: #fafafa; }
+.preview-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
+.preview-title { font-size: .9rem; font-weight: 700; }
+.preview-loading { font-size: .82rem; color: #9ca3af; }
+.preview-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.ps-item { display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+.ps-num { font-size: 1.6rem; font-weight: 900; color: #0d631b; }
+.ps-label { font-size: .72rem; text-transform: uppercase; font-weight: 600; color: #6b7280; text-align: center; }
+.preview-table-wrap { overflow-x: auto; }
+.preview-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.preview-table th { background: #f3f4f6; padding: .4rem .6rem; text-align: left; font-size: .76rem; text-transform: uppercase; color: #6b7280; font-weight: 700; }
+.preview-table td { padding: .4rem .6rem; border-bottom: 1px solid #f3f4f6; }
+.tipo-badge { background: #ede9fe; color: #5b21b6; padding: .15rem .55rem; border-radius: 8px; font-size: .78rem; font-weight: 600; }
+.cap-warn td { color: #dc2626; }
+.warn-icon { margin-left: .3rem; }
+.preview-hint { font-size: .82rem; color: #6b7280; margin: .75rem 0 0; padding: .5rem .75rem; background: #fffbeb; border-radius: 6px; border: 1px solid #fde68a; }
 
 .summary-badge { background: #e8f5e9; color: #166534; padding: .3rem .8rem; border-radius: 12px; font-size: .85rem; font-weight: 600; }
 .empty-state { text-align: center; padding: 3rem; color: #9ca3af; }
 .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
 .room-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.1rem; background: #fff; }
 .room-card--closed { opacity: .7; background: #f9fafb; }
-.room-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+.room-card__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .6rem; flex-wrap: wrap; gap: .25rem; }
 .room-card__id { font-weight: 700; font-size: .9rem; color: var(--color-primary, #0d631b); }
+.room-card__hall { font-size: .8rem; color: #6b7280; margin-left: .4rem; }
 .room-card__badges { display: flex; gap: .3rem; flex-wrap: wrap; }
 .badge--tipo { background: #ede9fe; color: #5b21b6; font-size: .72rem; padding: .15rem .5rem; border-radius: 8px; font-weight: 600; }
 .badge--closed { background: #f3f4f6; color: #6b7280; padding: .2rem .6rem; border-radius: 8px; font-size: .78rem; }

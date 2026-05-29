@@ -159,24 +159,45 @@ async function deleteSector(id: number) {
 }
 
 // ── Halls ─────────────────────────────────────────────────────────────────
-type Hall = { id: number; nome: string; andar: string | null; capacidade: number | null }
-const showHallForm = ref(false)
-const hallFormId = ref<number | null>(null)
-const hallFormSetorId = ref<number | null>(null)
-const hallFormNome = ref('')
-const hallFormAndar = ref('')
-const hallFormCap = ref<number | string>('')
-const savingHall = ref(false)
+const TIPOS_SALA_OPTIONS = [
+  { value: '',                      label: 'Geral (aceita qualquer tipo)' },
+  { value: 'Mostra de Jogos',       label: 'Mostra de Jogos (ex.: Auditório)' },
+  { value: 'Desenvolvimento Prático', label: 'Desenvolvimento Prático (máx 5 padrão)' },
+  { value: 'Artigo / TCC',          label: 'Artigo / TCC' },
+  { value: 'Iniciação Científica',  label: 'Iniciação Científica' },
+]
+const DEFAULT_MAX: Record<string, number> = {
+  'Mostra de Jogos': 10, 'Desenvolvimento Prático': 5, 'Artigo / TCC': 10, 'Iniciação Científica': 10,
+}
+
+type Hall = { id: number; nome: string; andar: string | null; capacidade: number | null; tipoSala: string | null; maxTrabalhos: number | null }
+const showHallForm      = ref(false)
+const hallFormId        = ref<number | null>(null)
+const hallFormSetorId   = ref<number | null>(null)
+const hallFormNome      = ref('')
+const hallFormAndar     = ref('')
+const hallFormCap       = ref<number | string>('')
+const hallFormTipo      = ref('')
+const hallFormMax       = ref<number | string>('')
+const savingHall        = ref(false)
+
+function onHallTipoChange() {
+  if (hallFormTipo.value && hallFormMax.value === '') {
+    hallFormMax.value = DEFAULT_MAX[hallFormTipo.value] ?? 10
+  }
+}
 
 function openNewHall(setorId: number) {
   hallFormId.value = null; hallFormSetorId.value = setorId
   hallFormNome.value = ''; hallFormAndar.value = ''; hallFormCap.value = ''
+  hallFormTipo.value = ''; hallFormMax.value = ''
   showHallForm.value = true
 }
 
 function openEditHall(setorId: number, h: Hall) {
   hallFormId.value = h.id; hallFormSetorId.value = setorId
   hallFormNome.value = h.nome; hallFormAndar.value = h.andar ?? ''; hallFormCap.value = h.capacidade ?? ''
+  hallFormTipo.value = h.tipoSala ?? ''; hallFormMax.value = h.maxTrabalhos ?? ''
   showHallForm.value = true
 }
 
@@ -184,9 +205,11 @@ async function saveHall() {
   if (!hallFormNome.value.trim()) { toast.error('Nome é obrigatório.'); return }
   savingHall.value = true
   const payload = {
-    nome: hallFormNome.value.trim(),
-    andar: hallFormAndar.value || null,
-    capacidade: hallFormCap.value !== '' ? Number(hallFormCap.value) : null,
+    nome:         hallFormNome.value.trim(),
+    andar:        hallFormAndar.value || null,
+    capacidade:   hallFormCap.value !== '' ? Number(hallFormCap.value) : null,
+    tipoSala:     hallFormTipo.value || null,
+    maxTrabalhos: hallFormMax.value !== '' ? Number(hallFormMax.value) : null,
   }
   try {
     if (hallFormId.value) await client.patch(`/evidence-journey/config/halls/${hallFormId.value}`, payload)
@@ -287,12 +310,16 @@ onMounted(() => { loadConfig(); loadSectors() })
           </div>
 
           <table class="data-table">
-            <thead><tr><th>Sala</th><th>Andar</th><th>Capacidade</th><th></th></tr></thead>
+            <thead><tr><th>Sala</th><th>Andar</th><th>Tipo p/ Sorteio</th><th>Máx Trabalhos</th><th></th></tr></thead>
             <tbody>
               <tr v-for="h in s.salas ?? []" :key="h.id">
                 <td>{{ h.nome }}</td>
                 <td>{{ h.andar ?? '—' }}</td>
-                <td>{{ h.capacidade ?? '—' }}</td>
+                <td>
+                  <span v-if="h.tipoSala" class="tipo-chip">{{ h.tipoSala }}</span>
+                  <span v-else class="empty-hint">Geral</span>
+                </td>
+                <td>{{ h.maxTrabalhos ?? (h.tipoSala === 'Desenvolvimento Prático' ? '5' : '10') }}</td>
                 <td class="actions-cell">
                   <button class="btn-link" @click="openEditHall(s.id, h)">Editar</button>
                   <button class="btn-link btn-link--danger" @click="deleteHall(h.id)">Excluir</button>
@@ -333,20 +360,42 @@ onMounted(() => { loadConfig(); loadSectors() })
     <div v-if="showHallForm" class="modal-overlay" @click.self="showHallForm = false">
       <div class="modal">
         <h3 class="modal__title">{{ hallFormId ? 'Editar' : 'Nova' }} Sala</h3>
+
         <div class="form-row">
           <div class="form-group">
             <label>Número/Nome</label>
-            <input v-model="hallFormNome" type="text" class="input-field" placeholder="Ex.: 1 ou Lab A" />
+            <input v-model="hallFormNome" type="text" class="input-field" placeholder="Ex.: 1, Lab A, Auditório" />
           </div>
           <div class="form-group">
             <label>Andar (opcional)</label>
             <input v-model="hallFormAndar" type="text" class="input-field" placeholder="Ex.: 2º" />
           </div>
         </div>
+
         <div class="form-group">
-          <label>Capacidade (opcional)</label>
-          <input v-model.number="hallFormCap" type="number" class="input-field" min="1" />
+          <label>Tipo para o Sorteio</label>
+          <select v-model="hallFormTipo" class="input-field" @change="onHallTipoChange">
+            <option v-for="t in TIPOS_SALA_OPTIONS" :key="t.value" :value="t.value">{{ t.label }}</option>
+          </select>
+          <p class="field-hint">
+            Define quais trabalhos serão alocados nesta sala durante o sorteio.
+            <strong>Mostra de Jogos</strong> reserva a sala exclusivamente para trabalhos da Mostra (ex.: auditório).
+          </p>
         </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Máx. trabalhos por dia</label>
+            <input v-model.number="hallFormMax" type="number" class="input-field" min="1" max="30"
+              :placeholder="hallFormTipo === 'Desenvolvimento Prático' ? '5' : '10'" />
+            <p class="field-hint">O sorteio divide os trabalhos igualmente entre as salas do mesmo tipo.</p>
+          </div>
+          <div class="form-group">
+            <label>Capacidade física (opcional)</label>
+            <input v-model.number="hallFormCap" type="number" class="input-field" min="1" />
+          </div>
+        </div>
+
         <div class="modal__actions">
           <button class="btn btn--primary" :disabled="savingHall" @click="saveHall">
             {{ savingHall ? 'Salvando…' : 'Salvar' }}
@@ -380,6 +429,8 @@ onMounted(() => { loadConfig(); loadSectors() })
 .date-tag { background: #e0f2e9; color: #065f46; padding: .2rem .5rem; border-radius: 4px; font-size: .82rem; display: flex; align-items: center; gap: .25rem; }
 .tag-remove { background: none; border: none; cursor: pointer; font-size: 1rem; line-height: 1; color: #065f46; padding: 0; }
 .empty-hint { font-size: .82rem; color: #9ca3af; }
+.tipo-chip { background: #ede9fe; color: #5b21b6; padding: .15rem .55rem; border-radius: 8px; font-size: .78rem; font-weight: 600; }
+.field-hint { font-size: .78rem; color: #6b7280; margin: .25rem 0 0; }
 .btn { padding: .4rem .9rem; border: 1px solid transparent; border-radius: 6px; cursor: pointer; font-size: .85rem; font-weight: 600; background: #f3f4f6; }
 .btn--primary { background: var(--color-primary, #0d631b); color: #fff; border-color: var(--color-primary, #0d631b); }
 .btn--outline { background: #fff; border-color: #d1d5db; }

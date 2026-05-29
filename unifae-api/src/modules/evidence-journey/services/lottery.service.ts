@@ -6,20 +6,25 @@ import { DynamicQuestionEntity } from '../../../database/entities/dynamic-questi
 import { QuestionType } from '../../../database/entities/enums';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
 import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
+import { PresentationHallEntity } from '../../../database/entities/presentation-hall.entity';
 import { RoomProfessorEntity } from '../../../database/entities/room-professor.entity';
 import { ProfessorAvailabilityEntity } from '../../../database/entities/professor-availability.entity';
 import { WorkGroupEntity } from '../../../database/entities/work-group.entity';
 import { RoomWorkEntity } from '../../../database/entities/room-work.entity';
 import { UserEntity } from '../../../database/entities/user.entity';
-import { EvidenceWorkStatus, RoomType, WorkCategory, WorkType } from '../../../database/entities/enums';
+import {
+  EvidenceWorkStatus,
+  RoomType,
+  WorkCategory,
+  WorkType,
+} from '../../../database/entities/enums';
 import { AuditService } from '../../audit/audit.service';
 import type { RequestContext } from '../../../common/http/request-context';
-import type { RoomTypeConfigDto } from '../dto/run-lottery.dto';
 
-const MIN_PROFESSORS_PER_BANCA  = 2;
-const MAX_PROFESSORS_PER_BANCA  = 3;
+const MIN_PROFESSORS_PER_BANCA = 2;
+const MAX_PROFESSORS_PER_BANCA = 3;
 
-/** Máximo de trabalhos por tipo de sala, se não especificado no DTO. */
+/** Máximo de trabalhos por tipo de sala quando não configurado na sala. */
 const DEFAULT_MAX_BY_TIPO: Record<RoomType, number> = {
   [RoomType.GERAL]:        10,
   [RoomType.MOSTRA_JOGOS]: 10,
@@ -28,14 +33,17 @@ const DEFAULT_MAX_BY_TIPO: Record<RoomType, number> = {
   [RoomType.IC]:            10,
 };
 
-/** Quais categorias / tipos de trabalho cada tipo de sala aceita. null = aceita tudo. */
-const TIPO_SALA_FILTRO: Record<RoomType, { categoria?: WorkCategory; tipoTrabalho?: WorkType | null } | null> = {
-  [RoomType.GERAL]:        null,
-  [RoomType.MOSTRA_JOGOS]: { categoria: WorkCategory.MOSTRA_JOGOS },
-  [RoomType.PRATICO]:      { tipoTrabalho: WorkType.DESENVOLVIMENTO_PRATICO },
-  [RoomType.ARTIGO_TCC]:   { tipoTrabalho: WorkType.TCC },       // TCC e Pesquisa
-  [RoomType.IC]:           { tipoTrabalho: WorkType.INICIACAO_CIENTIFICA },
-};
+/** Classifica um trabalho no tipo de sala adequado. */
+function tipoSalaParaTrabalho(work: EvidenceWorkEntity): RoomType {
+  if (work.categoria === WorkCategory.MOSTRA_JOGOS) return RoomType.MOSTRA_JOGOS;
+  switch (work.tipoTrabalho) {
+    case WorkType.DESENVOLVIMENTO_PRATICO: return RoomType.PRATICO;
+    case WorkType.TCC:                     return RoomType.ARTIGO_TCC;
+    case WorkType.PESQUISA:                return RoomType.ARTIGO_TCC;
+    case WorkType.INICIACAO_CIENTIFICA:    return RoomType.IC;
+    default:                               return RoomType.GERAL;
+  }
+}
 
 @Injectable()
 export class LotteryService {
@@ -44,6 +52,8 @@ export class LotteryService {
     private readonly works: Repository<EvidenceWorkEntity>,
     @InjectRepository(PresentationRoomEntity)
     private readonly rooms: Repository<PresentationRoomEntity>,
+    @InjectRepository(PresentationHallEntity)
+    private readonly halls: Repository<PresentationHallEntity>,
     @InjectRepository(RoomProfessorEntity)
     private readonly roomProfessors: Repository<RoomProfessorEntity>,
     @InjectRepository(ProfessorAvailabilityEntity)
@@ -61,13 +71,8 @@ export class LotteryService {
     private readonly audit: AuditService,
   ) {}
 
-  async runLottery(
-    dataEvento: string,
-    executorId: number,
-    tiposSala?: RoomTypeConfigDto[],
-    ctx?: RequestContext,
-  ) {
-    // ── 1. Limpar sorteio anterior ──────────────────────────────────────────
+  async runLottery(dataEvento: string, executorId: number, ctx?: RequestContext) {
+    // ── 1. Limpar sorteio anterior ────────────────────────────────────────────
     const existingRooms = await this.rooms.find({ where: { dataEvento } });
     if (existingRooms.length > 0) {
       const roomIds = existingRooms.map((r) => r.id);
@@ -80,7 +85,7 @@ export class LotteryService {
       await this.rooms.delete({ dataEvento });
     }
 
-    // ── 2. Trabalhos aprovados ──────────────────────────────────────────────
+    // ── 2. Trabalhos aprovados ────────────────────────────────────────────────
     const approvedWorks = await this.works.find({
       where: { status: EvidenceWorkStatus.APROVADO, deletedAt: IsNull() },
       relations: ['aluno'],
@@ -89,100 +94,78 @@ export class LotteryService {
       throw new BadRequestException('Nenhum trabalho aprovado encontrado para o sorteio.');
     }
 
-    // ── 3. Professores disponíveis ──────────────────────────────────────────
-    const avails = await this.availabilities.find({
-      where: { dataEvento },
-      relations: ['professor'],
-    });
-    const professors = avails.map((a) => a.professor);
+    // ── 3. Salas físicas cadastradas ─────────────────────────────────────────
+    const allHalls = await this.halls.find({ order: { tipoSala: 'ASC', nome: 'ASC' } });
 
-    // ── 4. Calcular quantas salas e quantos professores são necessários ──────
-    const roomConfigs = this.buildRoomConfigs(tiposSala, approvedWorks);
-    const totalRooms  = roomConfigs.reduce((s, c) => s + c.quantidade, 0);
-    const profsNeeded = totalRooms * MIN_PROFESSORS_PER_BANCA;
+    // ── 4. Construir plano de distribuição ───────────────────────────────────
+    const plan = this.buildDistributionPlan(approvedWorks, allHalls);
+
+    // ── 5. Professores disponíveis ────────────────────────────────────────────
+    const avails     = await this.availabilities.find({ where: { dataEvento }, relations: ['professor'] });
+    const professors = avails.map((a) => a.professor);
+    const profsNeeded = plan.length * MIN_PROFESSORS_PER_BANCA;
 
     if (professors.length < profsNeeded) {
       const faltam = profsNeeded - professors.length;
       throw new BadRequestException(
         `Professores insuficientes para o sorteio.\n` +
-        `Salas planejadas: ${totalRooms} · Professores disponíveis: ${professors.length} · ` +
+        `Salas planejadas: ${plan.length} · Professores disponíveis: ${professors.length} · ` +
         `Necessário: ${profsNeeded} (mínimo ${MIN_PROFESSORS_PER_BANCA} por sala).\n` +
         `Cadastre mais ${faltam} professor(es) disponível(is) para ${dataEvento}.`,
       );
     }
 
-    // ── 5. Distribuir trabalhos nas salas por tipo ──────────────────────────
+    // ── 6. Criar salas e atribuir bancas ─────────────────────────────────────
     const savedRooms: PresentationRoomEntity[] = [];
     let   professorIndex = 0;
-    // Cada professor só pode ser atribuído a UMA sala por dia
-    const assignedProfIds = new Set<number>();
+    const assignedProfIds = new Set<number>(); // professor só pode estar em 1 sala/dia
 
-    for (const cfg of roomConfigs) {
-      const worksForType = this.shuffle([...cfg.works]);
-      const chunks       = this.chunkArray(worksForType, cfg.maxTrabalhos);
+    for (const slot of plan) {
+      if (slot.works.length === 0) continue;
 
-      for (const chunk of chunks) {
-        if (chunk.length === 0) continue;
+      // Professores elegíveis: não usados + cursoBase diferente dos trabalhos do slot
+      const coursesInSlot = new Set(slot.works.map((w) => (w.cursoTrabalho ?? '').toLowerCase()));
+      const eligible      = professors.filter(
+        (p) => !assignedProfIds.has(p.id) && !coursesInSlot.has((p.cursoBase ?? '').toLowerCase()),
+      );
 
-        // Selecionar professores elegíveis (não usados ainda neste dia)
-        const available = professors.filter((p) => !assignedProfIds.has(p.id));
+      if (eligible.length < MIN_PROFESSORS_PER_BANCA) continue; // slot sem banca → pular
 
-        // Filtrar por cursoBase dos trabalhos do chunk
-        const coursesInChunk = new Set(
-          chunk.map((w) => (w.cursoTrabalho ?? '').toLowerCase()),
+      const rotated   = this.rotateArray(eligible, professorIndex);
+      const bancaSize = Math.min(MAX_PROFESSORS_PER_BANCA, rotated.length);
+      const banca     = rotated.slice(0, bancaSize);
+      const lider     = banca[0];
+
+      professorIndex = (professorIndex + bancaSize) % professors.length;
+      for (const p of banca) assignedProfIds.add(p.id);
+
+      const room = await this.rooms.save(
+        this.rooms.create({
+          dataEvento,
+          tipoSala:        slot.tipoSala,
+          hallId:          slot.hall?.id ?? null,
+          professorLiderId: lider.id,
+          fechada:         false,
+        }),
+      );
+
+      for (let i = 0; i < slot.works.length; i++) {
+        await this.roomWorks.save(
+          this.roomWorks.create({ salaId: room.id, trabalhoId: slot.works[i].id, ordem: i + 1 }),
         );
-        const eligible = available.filter(
-          (p) => !coursesInChunk.has((p.cursoBase ?? '').toLowerCase()),
+        await this.groups.save(
+          this.groups.create({ alunoId: slot.works[i].alunoId, trabalhoId: slot.works[i].id }),
         );
-
-        if (eligible.length < MIN_PROFESSORS_PER_BANCA) {
-          // Não há banca suficiente para este grupo — pular
-          continue;
-        }
-
-        const rotated   = this.rotateArray(eligible, professorIndex);
-        const bancaSize = Math.min(MAX_PROFESSORS_PER_BANCA, rotated.length);
-        const banca     = rotated.slice(0, bancaSize);
-        const lider     = banca[0];
-
-        professorIndex = (professorIndex + bancaSize) % professors.length;
-
-        // Marcar professores como usados neste dia
-        for (const p of banca) assignedProfIds.add(p.id);
-
-        // Criar sala
-        const room = await this.rooms.save(
-          this.rooms.create({
-            dataEvento,
-            tipoSala: cfg.tipo,
-            professorLiderId: lider.id,
-            fechada: false,
-          }),
-        );
-
-        // Criar room_works (um por trabalho)
-        for (let i = 0; i < chunk.length; i++) {
-          await this.roomWorks.save(
-            this.roomWorks.create({ salaId: room.id, trabalhoId: chunk[i].id, ordem: i + 1 }),
-          );
-          // Registrar grupo (aluno ↔ trabalho)
-          await this.groups.save(
-            this.groups.create({ alunoId: chunk[i].alunoId, trabalhoId: chunk[i].id }),
-          );
-        }
-
-        // Atribuir banca
-        for (const prof of banca) {
-          await this.roomProfessors.save(
-            this.roomProfessors.create({ salaId: room.id, professorId: prof.id }),
-          );
-        }
-
-        savedRooms.push(room);
       }
-    }
 
-    const skipped = approvedWorks.length - savedRooms.reduce((s, _) => s, 0);
+      for (const prof of banca) {
+        await this.roomProfessors.save(
+          this.roomProfessors.create({ salaId: room.id, professorId: prof.id }),
+        );
+      }
+
+      savedRooms.push(room);
+    }
 
     await this.audit.log({
       userId: executorId,
@@ -198,80 +181,159 @@ export class LotteryService {
       dataEvento,
       message:
         savedRooms.length === 0
-          ? 'Nenhuma sala criada. Verifique professores disponíveis e conflitos de curso base.'
+          ? 'Nenhuma sala criada. Verifique professores disponíveis e configuração de salas.'
           : `Sorteio concluído: ${savedRooms.length} sala(s) criada(s).`,
     };
   }
 
   /**
-   * Monta a lista de configs de sala, distribuindo os trabalhos aprovados
-   * conforme os tipos solicitados (ou GERAL com todos os trabalhos se não especificado).
+   * Constrói o plano de distribuição: para cada slot, qual sala física, tipo e
+   * lista de trabalhos. Lança erro descritivo se faltar salas físicas.
    */
-  private buildRoomConfigs(
-    tiposSala: RoomTypeConfigDto[] | undefined,
+  private buildDistributionPlan(
     approvedWorks: EvidenceWorkEntity[],
-  ) {
-    if (!tiposSala?.length) {
-      const max = DEFAULT_MAX_BY_TIPO[RoomType.GERAL];
-      return [{
-        tipo:        RoomType.GERAL,
-        maxTrabalhos: max,
-        quantidade:  Math.ceil(approvedWorks.length / max),
-        works:       approvedWorks,
-      }];
+    allHalls: PresentationHallEntity[],
+  ): { hall: PresentationHallEntity | null; tipoSala: RoomType; works: EvidenceWorkEntity[] }[] {
+    // Agrupar trabalhos por tipo de sala-alvo
+    const worksByType = new Map<RoomType, EvidenceWorkEntity[]>();
+    for (const w of approvedWorks) {
+      const t = tipoSalaParaTrabalho(w);
+      if (!worksByType.has(t)) worksByType.set(t, []);
+      worksByType.get(t)!.push(w);
     }
 
-    const usedIds = new Set<number>();
-    const configs: { tipo: RoomType; maxTrabalhos: number; quantidade: number; works: EvidenceWorkEntity[] }[] = [];
+    // Agrupar salas físicas por tipo (null/GERAL agrupa junto em GERAL)
+    const hallsByType = new Map<RoomType, PresentationHallEntity[]>();
+    for (const h of allHalls) {
+      const key = h.tipoSala ?? RoomType.GERAL;
+      if (!hallsByType.has(key)) hallsByType.set(key, []);
+      hallsByType.get(key)!.push(h);
+    }
 
-    for (const cfg of tiposSala) {
-      const max    = cfg.maxTrabalhos ?? DEFAULT_MAX_BY_TIPO[cfg.tipo] ?? 10;
-      const filtro = TIPO_SALA_FILTRO[cfg.tipo];
+    const plan:    { hall: PresentationHallEntity | null; tipoSala: RoomType; works: EvidenceWorkEntity[] }[] = [];
+    const errors:  string[] = [];
+    const usedHallIds = new Set<number>();
 
-      let filtered: EvidenceWorkEntity[];
-      if (!filtro) {
-        filtered = approvedWorks.filter((w) => !usedIds.has(w.id));
-      } else if (filtro.categoria) {
-        filtered = approvedWorks.filter(
-          (w) => !usedIds.has(w.id) && w.categoria === filtro.categoria,
-        );
-      } else if (filtro.tipoTrabalho) {
-        const aceitos: WorkType[] =
-          cfg.tipo === RoomType.ARTIGO_TCC
-            ? [WorkType.TCC, WorkType.PESQUISA]
-            : [filtro.tipoTrabalho];
-        filtered = approvedWorks.filter(
-          (w) => !usedIds.has(w.id) && aceitos.includes(w.tipoTrabalho as WorkType),
-        );
-      } else {
-        filtered = [];
+    for (const [tipo, works] of worksByType.entries()) {
+      if (works.length === 0) continue;
+
+      // Buscar salas do tipo específico; fallback para GERAL
+      const dedicatedHalls = hallsByType.get(tipo) ?? [];
+      const geralHalls     = hallsByType.get(RoomType.GERAL) ?? [];
+      const availableHalls = dedicatedHalls.length > 0 ? dedicatedHalls : geralHalls;
+
+      const shuffledWorks = this.shuffle([...works]);
+
+      if (allHalls.length === 0) {
+        // Sem salas cadastradas → criar salas virtuais (sem hall físico)
+        const maxPer  = DEFAULT_MAX_BY_TIPO[tipo];
+        const chunks  = this.distributeEvenly(shuffledWorks, Math.ceil(shuffledWorks.length / maxPer));
+        for (const chunk of chunks) plan.push({ hall: null, tipoSala: tipo, works: chunk });
+        continue;
       }
 
-      for (const w of filtered) usedIds.add(w.id);
+      if (availableHalls.length === 0) {
+        errors.push(
+          `${works.length} trabalho(s) do tipo "${tipo}" sem sala física configurada. ` +
+          `Configure uma sala com tipo "${tipo}" ou deixe sem tipo (Geral).`,
+        );
+        continue;
+      }
 
-      const qtd = cfg.quantidade ?? Math.max(1, Math.ceil(filtered.length / max));
-      configs.push({ tipo: cfg.tipo, maxTrabalhos: max, quantidade: qtd, works: filtered });
+      // Calcular distribuição
+      const freeHalls = availableHalls.filter((h) => !usedHallIds.has(h.id));
+      if (freeHalls.length === 0) {
+        errors.push(`Todas as salas do tipo "${tipo}" já estão ocupadas neste sorteio.`);
+        continue;
+      }
+
+      // Capacidade por sala
+      const maxPerHall = (h: PresentationHallEntity) => h.maxTrabalhos ?? DEFAULT_MAX_BY_TIPO[tipo];
+      const totalCapacity = freeHalls.reduce((s, h) => s + maxPerHall(h), 0);
+
+      if (totalCapacity < shuffledWorks.length) {
+        errors.push(
+          `Tipo "${tipo}": ${shuffledWorks.length} trabalho(s) mas apenas capacidade para ` +
+          `${totalCapacity} (${freeHalls.length} sala(s) disponível(is)). ` +
+          `Adicione mais salas do tipo "${tipo}" ou aumente o máximo por sala.`,
+        );
+        continue;
+      }
+
+      // Distribuir igualmente entre as salas disponíveis até atingir capacidade
+      let remaining = [...shuffledWorks];
+      for (const hall of freeHalls) {
+        if (remaining.length === 0) break;
+        const max   = maxPerHall(hall);
+        const chunk = remaining.splice(0, max);
+        plan.push({ hall, tipoSala: tipo, works: chunk });
+        usedHallIds.add(hall.id);
+      }
     }
 
-    // Trabalhos não cobertos pelos tipos explícitos → GERAL
-    const remaining = approvedWorks.filter((w) => !usedIds.has(w.id));
-    if (remaining.length) {
-      const max = DEFAULT_MAX_BY_TIPO[RoomType.GERAL];
-      configs.push({
-        tipo:         RoomType.GERAL,
-        maxTrabalhos: max,
-        quantidade:   Math.ceil(remaining.length / max),
-        works:        remaining,
-      });
+    if (errors.length > 0) {
+      throw new BadRequestException(errors.join('\n'));
     }
 
-    return configs;
+    return plan;
+  }
+
+  /** Preview do plano sem executar — usado pela view para mostrar o cálculo. */
+  async getLotteryPreview(dataEvento: string) {
+    const works    = await this.works.find({
+      where: { status: EvidenceWorkStatus.APROVADO, deletedAt: IsNull() },
+    });
+    const allHalls = await this.halls.find({ order: { tipoSala: 'ASC', nome: 'ASC' } });
+    const avails   = await this.availabilities.find({ where: { dataEvento } });
+
+    // Contar trabalhos por tipo
+    const countByType: Record<string, number> = {};
+    for (const w of works) {
+      const t = tipoSalaParaTrabalho(w);
+      countByType[t] = (countByType[t] ?? 0) + 1;
+    }
+
+    // Calcular salas necessárias por tipo
+    const neededByType: Record<string, { salas: number; capacidade: number }> = {};
+    const hallsByType = new Map<RoomType, PresentationHallEntity[]>();
+    for (const h of allHalls) {
+      const key = h.tipoSala ?? RoomType.GERAL;
+      if (!hallsByType.has(key)) hallsByType.set(key, []);
+      hallsByType.get(key)!.push(h);
+    }
+
+    for (const [tipo, count] of Object.entries(countByType)) {
+      const dedicated    = hallsByType.get(tipo as RoomType) ?? [];
+      const geral        = hallsByType.get(RoomType.GERAL) ?? [];
+      const usableHalls  = dedicated.length > 0 ? dedicated : geral;
+      const maxPerHall   = (h: PresentationHallEntity) =>
+        h.maxTrabalhos ?? DEFAULT_MAX_BY_TIPO[tipo as RoomType] ?? 10;
+      const totalCap     = usableHalls.reduce((s, h) => s + maxPerHall(h), 0);
+      const salasNeeded  = allHalls.length === 0
+        ? Math.ceil(count / (DEFAULT_MAX_BY_TIPO[tipo as RoomType] ?? 10))
+        : Math.min(usableHalls.length, Math.ceil(count / (maxPerHall(usableHalls[0] ?? {} as any) || 10)));
+
+      neededByType[tipo] = { salas: salasNeeded, capacidade: totalCap };
+    }
+
+    return {
+      totalWorks:         works.length,
+      profsDisponiveis:   avails.length,
+      totalSalasNecessarias: Object.values(neededByType).reduce((s, v) => s + v.salas, 0),
+      hallsConfiguradas:  allHalls.length,
+      porTipo: Object.entries(countByType).map(([tipo, count]) => ({
+        tipo,
+        trabalhos: count,
+        salas:     neededByType[tipo]?.salas ?? 0,
+        capacidade: neededByType[tipo]?.capacidade ?? 0,
+      })),
+    };
   }
 
   async getRooms(dataEvento: string) {
     return this.rooms.find({
       where: { dataEvento },
-      relations: ['professorLider', 'banca', 'banca.professor', 'works', 'works.trabalho', 'works.trabalho.aluno'],
+      relations: ['hall', 'professorLider', 'banca', 'banca.professor', 'works', 'works.trabalho', 'works.trabalho.aluno'],
       order: { id: 'ASC' },
     });
   }
@@ -293,12 +355,9 @@ export class LotteryService {
       const banca   = room.banca ?? [];
       const profIds = banca.map((rp) => rp.professor.id);
 
-      // Status por tipo, agrupando por professor, sobre todos os trabalhos da sala
       const evalStatus = (questionIds: number[]) => {
         if (!questionIds.length) return { total: profIds.length, done: 0, pending: banca.map((rp) => rp.professor), overall: 'sem_perguntas' as const };
-
-        // Professor considerado "completo" se respondeu todas as perguntas de todos os trabalhos da sala
-        const trabIds = room.works.map((rw) => rw.trabalhoId);
+        const trabIds   = room.works.map((rw) => rw.trabalhoId);
         const profsDone = profIds.filter((pid) =>
           trabIds.every((tid) =>
             questionIds.every((qid) =>
@@ -306,14 +365,13 @@ export class LotteryService {
             ),
           ),
         );
-
         const profsPending = banca
           .filter((rp) => !profsDone.includes(rp.professor.id))
           .map((rp) => ({ id: rp.professor.id, name: rp.professor.name }));
 
         const overall =
-          profsDone.length === 0              ? 'nao_iniciado' :
-          profsDone.length < profIds.length   ? 'parcial'       : 'completo';
+          profsDone.length === 0            ? 'nao_iniciado' :
+          profsDone.length < profIds.length ? 'parcial'       : 'completo';
 
         return { total: profIds.length, done: profsDone.length, pending: profsPending, overall };
       };
@@ -350,20 +408,13 @@ export class LotteryService {
     const roomsOnDate = await this.rooms.find({ where: { dataEvento } });
     let updated = 0;
     for (const r of roomsOnDate) {
-      const bancaEntry = await this.roomProfessors.findOne({ where: { salaId: r.id, professorId: oldProfessorId } });
-      if (!bancaEntry) continue;
-
+      const entry = await this.roomProfessors.findOne({ where: { salaId: r.id, professorId: oldProfessorId } });
+      if (!entry) continue;
       await this.roomProfessors.delete({ salaId: r.id, professorId: oldProfessorId });
-      await this.roomProfessors.save(
-        this.roomProfessors.create({ salaId: r.id, professorId: newProfessorId }),
-      );
-
-      if (r.professorLiderId === oldProfessorId) {
-        await this.rooms.update(r.id, { professorLiderId: newProfessorId });
-      }
+      await this.roomProfessors.save(this.roomProfessors.create({ salaId: r.id, professorId: newProfessorId }));
+      if (r.professorLiderId === oldProfessorId) await this.rooms.update(r.id, { professorLiderId: newProfessorId });
       updated++;
     }
-
     return { swappedInRooms: updated, dataEvento };
   }
 
@@ -382,9 +433,10 @@ export class LotteryService {
     return [...arr.slice(start), ...arr.slice(0, start)];
   }
 
-  private chunkArray<T>(arr: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
-    return chunks;
+  private distributeEvenly<T>(arr: T[], numGroups: number): T[][] {
+    if (numGroups <= 0) return [];
+    const groups: T[][] = Array.from({ length: numGroups }, () => []);
+    arr.forEach((item, i) => groups[i % numGroups]!.push(item));
+    return groups;
   }
 }

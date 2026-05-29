@@ -27,6 +27,8 @@ class CreateHallDto {
   nome: string;
   andar?: string | null;
   capacidade?: number | null;
+  tipoSala?: string | null;
+  maxTrabalhos?: number | null;
 }
 
 @Injectable()
@@ -181,9 +183,11 @@ export class JornadaConfigService {
     if (!dto.nome?.trim()) throw new BadRequestException('Nome é obrigatório.');
     const hall = this.halls.create({
       setorId,
-      nome: dto.nome.trim(),
-      andar: dto.andar ?? null,
-      capacidade: dto.capacidade ?? null,
+      nome:         dto.nome.trim(),
+      andar:        dto.andar ?? null,
+      capacidade:   dto.capacidade ?? null,
+      tipoSala:     (dto.tipoSala as any) ?? null,
+      maxTrabalhos: dto.maxTrabalhos ?? null,
     });
     return this.halls.save(hall);
   }
@@ -191,10 +195,17 @@ export class JornadaConfigService {
   async updateHall(id: number, dto: Partial<CreateHallDto>) {
     const hall = await this.halls.findOne({ where: { id } });
     if (!hall) throw new NotFoundException('Sala não encontrada.');
-    if (dto.nome !== undefined) hall.nome = dto.nome.trim();
-    if (dto.andar !== undefined) hall.andar = dto.andar ?? null;
-    if (dto.capacidade !== undefined) hall.capacidade = dto.capacidade ?? null;
+    if (dto.nome !== undefined)         hall.nome         = dto.nome.trim();
+    if (dto.andar !== undefined)        hall.andar        = dto.andar ?? null;
+    if (dto.capacidade !== undefined)   hall.capacidade   = dto.capacidade ?? null;
+    if (dto.tipoSala !== undefined)     (hall as any).tipoSala     = dto.tipoSala ?? null;
+    if (dto.maxTrabalhos !== undefined) (hall as any).maxTrabalhos = dto.maxTrabalhos ?? null;
     return this.halls.save(hall);
+  }
+
+  /** Retorna todas as salas físicas (para o serviço de sorteio). */
+  async getAllHalls() {
+    return this.halls.find({ order: { tipoSala: 'ASC', nome: 'ASC' } });
   }
 
   async deleteHall(id: number) {

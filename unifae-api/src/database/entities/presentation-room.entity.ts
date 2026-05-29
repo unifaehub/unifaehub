@@ -12,6 +12,7 @@ import {
 import { UserEntity } from './user.entity';
 import { RoomProfessorEntity } from './room-professor.entity';
 import { RoomWorkEntity } from './room-work.entity';
+import { PresentationHallEntity } from './presentation-hall.entity';
 import { RoomType } from './enums';
 
 @Entity('presentation_rooms')
@@ -33,6 +34,14 @@ export class PresentationRoomEntity {
     default: RoomType.GERAL,
   })
   tipoSala: RoomType | null;
+
+  /** Sala física vinculada (opcional — para rastreabilidade no relatório). */
+  @Column({ name: 'hall_id', type: 'int', nullable: true, default: null })
+  hallId: number | null;
+
+  @ManyToOne(() => PresentationHallEntity, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'hall_id' })
+  hall: PresentationHallEntity | null;
 
   @Column({ name: 'professor_lider_id' })
   professorLiderId: number;

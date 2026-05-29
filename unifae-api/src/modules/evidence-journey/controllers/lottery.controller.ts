@@ -27,7 +27,13 @@ export class LotteryController {
     @Req() req: Request,
   ) {
     const ctx = getRequestContext(req);
-    return this.service.runLottery(dto.dataEvento, user.id, dto.tiposSala, ctx);
+    return this.service.runLottery(dto.dataEvento, user.id, ctx);
+  }
+
+  @Get('preview')
+  @Roles(...JORNADA_ADMIN_ROLES)
+  preview(@Query('dataEvento') dataEvento: string) {
+    return this.service.getLotteryPreview(dataEvento);
   }
 
   @Get('rooms')
