@@ -16,8 +16,13 @@ export class KeywordService {
   }
 
   async getCurrentKeyword(): Promise<KeywordEntity | null> {
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date().toTimeString().substring(0, 8);
+    const today   = new Date().toISOString().split('T')[0];
+    const now     = new Date().toTimeString().substring(0, 8);
+    const expiry  = '23:00:00';
+
+    // Palavra-chave válida somente entre horaInicio e 23:00 do mesmo dia
+    if (now >= expiry) return null;
+
     return this.keywords
       .createQueryBuilder('k')
       .where('k.dataAgendamento = :today', { today })

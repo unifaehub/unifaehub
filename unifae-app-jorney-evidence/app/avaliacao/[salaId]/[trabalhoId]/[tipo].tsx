@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, ActivityIndicator, Alert, Animated,
+  TextInput, ActivityIndicator, Alert, Animated, Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { jornadaApi } from '../../../../src/api/jornada';
@@ -11,6 +12,7 @@ type Tipo = 'resumo' | 'apresentacao';
 const TIPO_LABELS: Record<Tipo, string> = { resumo: 'Resumo', apresentacao: 'Apresentação' };
 
 export default function AvaliacaoTipoScreen() {
+  const { top: topInset } = useSafeAreaInsets();
   const { salaId, trabalhoId, tipo } = useLocalSearchParams<{
     salaId: string; trabalhoId: string; tipo: string;
   }>();
@@ -112,8 +114,8 @@ export default function AvaliacaoTipoScreen() {
         </Animated.View>
       )}
 
-      {/* Header */}
-      <View style={s.header}>
+      {/* Header — paddingTop usa safe area inset + margem extra */}
+      <View style={[s.header, { paddingTop: topInset + 12 }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={s.backText}>← Voltar</Text>
         </TouchableOpacity>
@@ -217,7 +219,7 @@ const s = StyleSheet.create({
   center:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText:    { color: '#374151', fontSize: 15, marginBottom: 12 },
   link:         { color: '#0d631b', fontSize: 14 },
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   backText:     { color: '#0d631b', fontSize: 14, fontWeight: '600', minWidth: 60 },
   headerTitle:  { fontSize: 17, fontWeight: '800', color: '#111' },
   headerCounter:{ fontSize: 14, color: '#9ca3af', minWidth: 40, textAlign: 'right' },

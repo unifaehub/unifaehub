@@ -18,20 +18,19 @@ type RoomStatus = {
   evaluationStatus: { resumo: EvalSection; apresentacao: EvalSection; geral: 'completo' | 'parcial' | 'nao_iniciado' }
 }
 
-// ── State ─────────────────────────────────────────────────────────────────
-const today  = new Date().toISOString().slice(0, 10)
-const rooms  = ref<RoomStatus[]>([])
-const loading = ref(false)
+// ── State — data sempre = hoje ────────────────────────────────────────────
+const today     = new Date().toISOString().slice(0, 10)
+const rooms     = ref<RoomStatus[]>([])
+const loading   = ref(false)
 const lastUpdated = ref<Date | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
 
-// ── Computed ──────────────────────────────────────────────────────────────
 const summary = computed(() => ({
-  total:      rooms.value.length,
-  completos:  rooms.value.filter((r) => r.evaluationStatus.geral === 'completo').length,
-  parciais:   rooms.value.filter((r) => r.evaluationStatus.geral === 'parcial').length,
+  total:        rooms.value.length,
+  completos:    rooms.value.filter((r) => r.evaluationStatus.geral === 'completo').length,
+  parciais:     rooms.value.filter((r) => r.evaluationStatus.geral === 'parcial').length,
   naoIniciados: rooms.value.filter((r) => r.evaluationStatus.geral === 'nao_iniciado').length,
-  fechadas:   rooms.value.filter((r) => r.fechada).length,
+  fechadas:     rooms.value.filter((r) => r.fechada).length,
 }))
 
 const todayFormatted = computed(() =>
@@ -40,194 +39,224 @@ const todayFormatted = computed(() =>
   })
 )
 
-// ── Data ─────────────────────────────────────────────────────────────────
 async function load() {
   loading.value = true
   try {
-    // Usa endpoint público (sem auth)
     const { data } = await client.get(
       `/evidence-journey/public/rooms-status?dataEvento=${today}`,
     )
     rooms.value = data
     lastUpdated.value = new Date()
-  } catch { /* silencioso no projetor */ }
+  } catch { /* silencioso */ }
   finally { loading.value = false }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+// ── Helpers (idênticos ao RoomsView) ─────────────────────────────────────
 function roomLabel(r: RoomStatus) {
   return r.hall ? `Sala ${r.hall.nome}` : `Sala #${r.id}`
 }
-function andar(r: RoomStatus) {
-  return r.hall?.andar ?? null
+function overallLabel(s: EvalSection['overall']): string {
+  if (s === 'completo')     return '✅ Completo'
+  if (s === 'parcial')      return '⏳ Parcial'
+  if (s === 'nao_iniciado') return '🔴 Não iniciado'
+  return '—'
 }
-function geralClass(g: RoomStatus['evaluationStatus']['geral']) {
-  return { completo: 'geral--ok', parcial: 'geral--parcial', nao_iniciado: 'geral--none' }[g] ?? ''
+function overallClass(s: string) {
+  if (s === 'completo')     return 'badge--complete'
+  if (s === 'parcial')      return 'badge--partial'
+  if (s === 'nao_iniciado') return 'badge--none'
+  return ''
 }
-function geralIcon(g: RoomStatus['evaluationStatus']['geral']) {
-  return { completo: '✅', parcial: '⏳', nao_iniciado: '🔴' }[g] ?? ''
+function geralLabel(s: RoomStatus['evaluationStatus']['geral']) {
+  if (s === 'completo')     return '✅ Todas as avaliações entregues'
+  if (s === 'parcial')      return '⏳ Avaliações em andamento'
+  return '🔴 Nenhuma avaliação iniciada'
 }
 function formatTime(d: Date | null) {
   return d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
 }
 
-onMounted(() => {
-  load()
-  timer = setInterval(load, 30_000) // atualiza a cada 30 s
-})
+onMounted(() => { load(); timer = setInterval(load, 30_000) })
 onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 
 <template>
-  <div class="live-view">
-    <!-- ── Cabeçalho ─────────────────────────────────────────────────────── -->
-    <header class="live-header">
-      <div class="live-header__brand">
-        <span class="live-header__title">🎓 Jornada de Evidências e Mostra de Jogos</span>
-        <span class="live-header__date">{{ todayFormatted }}</span>
+  <div class="rooms-view">
+    <!-- ── Cabeçalho ──────────────────────────────────────────────────── -->
+    <div class="rooms-view__toolbar">
+      <div class="event-info">
+        <h2 class="rooms-view__title">🎓 Jornada de Evidências e Mostra de Jogos</h2>
+        <p class="event-date">{{ todayFormatted }}</p>
       </div>
-      <div class="live-header__status">
-        <span class="live-dot" :class="{ 'live-dot--pulse': !loading }"></span>
+      <div class="live-indicator">
+        <span class="live-dot" :class="{ 'live-dot--loading': loading }"></span>
         <span class="live-text">Ao vivo · atualizado às {{ formatTime(lastUpdated) }}</span>
+        <button class="btn-refresh" :disabled="loading" @click="load">↻</button>
       </div>
-    </header>
-
-    <!-- ── Sumário ───────────────────────────────────────────────────────── -->
-    <div v-if="rooms.length" class="summary-row">
-      <div class="s-chip s-chip--total">{{ summary.total }} Salas</div>
-      <div class="s-chip s-chip--ok">✅ {{ summary.completos }} Concluídas</div>
-      <div class="s-chip s-chip--par">⏳ {{ summary.parciais }} Em andamento</div>
-      <div class="s-chip s-chip--none">🔴 {{ summary.naoIniciados }} Não iniciadas</div>
-      <div class="s-chip s-chip--closed">🔒 {{ summary.fechadas }} Fechadas</div>
     </div>
 
-    <!-- ── Grid de salas ─────────────────────────────────────────────────── -->
-    <div v-if="rooms.length" class="rooms-grid">
-      <div
-        v-for="r in rooms"
-        :key="r.id"
-        class="room-card"
-        :class="{
-          'room-card--ok':     r.evaluationStatus.geral === 'completo',
-          'room-card--par':    r.evaluationStatus.geral === 'parcial',
-          'room-card--none':   r.evaluationStatus.geral === 'nao_iniciado',
-          'room-card--closed': r.fechada,
-        }"
-      >
-        <!-- Cabeçalho da sala -->
-        <div class="rc-head">
-          <div>
-            <span class="rc-name">{{ roomLabel(r) }}</span>
-            <span v-if="andar(r)" class="rc-andar"> · {{ andar(r) }}</span>
-          </div>
-          <span class="rc-status-icon">{{ geralIcon(r.evaluationStatus.geral) }}</span>
+    <template v-if="rooms.length || loading">
+      <!-- ── Sumário ──────────────────────────────────────────────────── -->
+      <div v-if="!loading && rooms.length" class="summary-bar">
+        <div class="summary-item summary-item--total">
+          <span class="si-num">{{ summary.total }}</span>
+          <span class="si-label">Salas</span>
         </div>
+        <div class="summary-item summary-item--complete">
+          <span class="si-num">{{ summary.completos }}</span>
+          <span class="si-label">Completas</span>
+        </div>
+        <div class="summary-item summary-item--partial">
+          <span class="si-num">{{ summary.parciais }}</span>
+          <span class="si-label">Parciais</span>
+        </div>
+        <div class="summary-item summary-item--none">
+          <span class="si-num">{{ summary.naoIniciados }}</span>
+          <span class="si-label">Não iniciadas</span>
+        </div>
+        <div class="summary-item summary-item--closed">
+          <span class="si-num">{{ summary.fechadas }}</span>
+          <span class="si-label">Fechadas</span>
+        </div>
+      </div>
 
-        <!-- Tipo de sala -->
-        <div v-if="r.tipoSala && r.tipoSala !== 'Geral'" class="rc-tipo">{{ r.tipoSala }}</div>
+      <div v-if="loading && !rooms.length" class="loading-state">Carregando salas…</div>
 
-        <!-- Trabalhos -->
-        <div class="rc-works">
-          <div v-for="rw in r.works ?? []" :key="rw.id" class="rc-work-item">
-            <span class="rc-work-num">{{ rw.ordem }}.</span>
-            <div>
-              <div class="rc-work-titulo">{{ rw.trabalho?.titulo }}</div>
-              <div class="rc-work-curso">{{ rw.trabalho?.cursoTrabalho }}</div>
+      <!-- ── Cards de salas ─────────────────────────────────────────── -->
+      <div class="rooms-grid">
+        <div
+          v-for="r in rooms"
+          :key="r.id"
+          class="room-card"
+          :class="{
+            'room-card--complete': r.evaluationStatus.geral === 'completo',
+            'room-card--partial':  r.evaluationStatus.geral === 'parcial',
+            'room-card--none':     r.evaluationStatus.geral === 'nao_iniciado',
+            'room-card--closed':   r.fechada,
+          }"
+        >
+          <!-- Cabeçalho -->
+          <div class="room-card__header">
+            <div class="room-card__left">
+              <span class="room-card__id">
+                {{ roomLabel(r) }}
+                <span v-if="r.hall?.andar" class="room-card__andar"> · {{ r.hall.andar }}</span>
+              </span>
+              <span v-if="r.fechada" class="badge badge--closed">🔒 Fechada</span>
             </div>
           </div>
-        </div>
 
-        <!-- Status de avaliação -->
-        <div class="rc-eval-row">
-          <div class="rc-eval-block" :class="`rc-eval--${r.evaluationStatus.resumo.overall}`">
-            <span class="rc-eval-label">Resumo</span>
-            <span class="rc-eval-count">{{ r.evaluationStatus.resumo.done }}/{{ r.evaluationStatus.resumo.total }}</span>
-          </div>
-          <div class="rc-eval-block" :class="`rc-eval--${r.evaluationStatus.apresentacao.overall}`">
-            <span class="rc-eval-label">Apresentação</span>
-            <span class="rc-eval-count">{{ r.evaluationStatus.apresentacao.done }}/{{ r.evaluationStatus.apresentacao.total }}</span>
-          </div>
-        </div>
+          <!-- Tipo de sala -->
+          <div v-if="r.tipoSala && r.tipoSala !== 'Geral'" class="room-card__tipo">{{ r.tipoSala }}</div>
 
-        <!-- Banca -->
-        <div class="rc-banca">
-          <span v-for="rp in r.banca" :key="rp.professor.id" class="rc-banca-name">
-            {{ rp.professor.name }}{{ rp.professor.id === r.professorLider?.id ? ' 👑' : '' }}
-          </span>
+          <!-- Status geral -->
+          <div class="room-card__geral">{{ geralLabel(r.evaluationStatus.geral) }}</div>
+
+          <!-- Trabalhos -->
+          <div class="room-card__works">
+            <div v-for="rw in r.works ?? []" :key="rw.id" class="work-item">
+              <span class="work-num">{{ rw.ordem }}.</span>
+              <div>
+                <div class="work-titulo">{{ rw.trabalho?.titulo }}</div>
+                <div class="work-curso">{{ rw.trabalho?.cursoTrabalho }} · {{ rw.trabalho?.aluno?.name ?? '—' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Resumo / Apresentação -->
+          <div class="eval-row">
+            <div class="eval-block" :class="overallClass(r.evaluationStatus.resumo.overall)">
+              <span class="eval-label">Resumo</span>
+              <span class="eval-count">{{ r.evaluationStatus.resumo.done }}/{{ r.evaluationStatus.resumo.total }}</span>
+              <span class="eval-badge">{{ overallLabel(r.evaluationStatus.resumo.overall) }}</span>
+            </div>
+            <div class="eval-block" :class="overallClass(r.evaluationStatus.apresentacao.overall)">
+              <span class="eval-label">Apresentação</span>
+              <span class="eval-count">{{ r.evaluationStatus.apresentacao.done }}/{{ r.evaluationStatus.apresentacao.total }}</span>
+              <span class="eval-badge">{{ overallLabel(r.evaluationStatus.apresentacao.overall) }}</span>
+            </div>
+          </div>
+
+          <!-- Banca -->
+          <div class="room-card__banca-row">
+            <span v-for="rp in r.banca" :key="rp.professor.id" class="banca-chip">
+              {{ rp.professor.name }}{{ rp.professor.id === r.professorLider?.id ? ' 👑' : '' }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Estado vazio -->
-    <div v-else-if="!loading" class="empty-state">
-      <p class="empty-text">Nenhuma sala encontrada para hoje.</p>
-      <p class="empty-hint">Execute o sorteio para iniciar o evento.</p>
-    </div>
-
-    <div v-if="loading && !rooms.length" class="loading-state">Carregando salas…</div>
+    <div v-else-if="!loading" class="empty-state">Nenhuma sala encontrada para hoje. Execute o sorteio para iniciar o evento.</div>
   </div>
 </template>
 
 <style scoped>
-/* ── Layout ─────────────────────────────────────────────────────────────── */
-.live-view    { min-height: 100vh; background: #0a0f1a; color: #f1f5f9; padding: 1.5rem; font-family: 'Segoe UI', Arial, sans-serif; }
+/* ── Base (idêntico ao RoomsView) ────────────────────────────────────────── */
+.rooms-view { padding: 1.5rem; background: #f8fafc; min-height: 100vh; }
+.rooms-view__toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.event-info  { display: flex; flex-direction: column; gap: .2rem; }
+.rooms-view__title { font-size: 1.3rem; font-weight: 700; margin: 0; color: #111; }
+.event-date  { font-size: .88rem; color: #6b7280; margin: 0; }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
-.live-header  { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #1e293b; }
-.live-header__brand { display: flex; flex-direction: column; gap: .25rem; }
-.live-header__title { font-size: 1.4rem; font-weight: 800; color: #4ade80; }
-.live-header__date  { font-size: .95rem; color: #94a3b8; }
-.live-header__status { display: flex; align-items: center; gap: .5rem; font-size: .85rem; color: #94a3b8; }
-.live-dot     { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; }
-.live-dot--pulse { animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+/* Live indicator */
+.live-indicator { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: #6b7280; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+.live-dot--loading { background: #f59e0b; animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.btn-refresh { background: none; border: 1px solid #d1d5db; border-radius: 6px; padding: .2rem .55rem; cursor: pointer; font-size: .9rem; }
+.btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ── Summary ─────────────────────────────────────────────────────────────── */
-.summary-row  { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-.s-chip       { padding: .4rem 1rem; border-radius: 20px; font-size: .85rem; font-weight: 700; }
-.s-chip--total  { background: #1e293b; color: #cbd5e1; }
-.s-chip--ok     { background: #14532d; color: #86efac; }
-.s-chip--par    { background: #713f12; color: #fde68a; }
-.s-chip--none   { background: #7f1d1d; color: #fca5a5; }
-.s-chip--closed { background: #312e81; color: #a5b4fc; }
+/* Summary */
+.summary-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.summary-item { display: flex; flex-direction: column; align-items: center; padding: .6rem 1.1rem; border-radius: 8px; min-width: 80px; }
+.summary-item--total    { background: #f3f4f6; }
+.summary-item--complete { background: #dcfce7; }
+.summary-item--partial  { background: #fef3c7; }
+.summary-item--none     { background: #fee2e2; }
+.summary-item--closed   { background: #e0e7ff; }
+.si-num   { font-size: 1.5rem; font-weight: 800; }
+.si-label { font-size: .72rem; text-transform: uppercase; font-weight: 600; color: #6b7280; margin-top: 2px; }
 
-/* ── Grid ────────────────────────────────────────────────────────────────── */
-.rooms-grid   { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+/* Grid */
+.rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+.room-card { border-radius: 10px; border: 2px solid #e5e7eb; background: #fff; overflow: hidden; }
+.room-card--complete { border-color: #86efac; }
+.room-card--partial  { border-color: #fcd34d; }
+.room-card--none     { border-color: #fca5a5; }
+.room-card--closed   { border-color: #a5b4fc; opacity: .85; }
 
-/* ── Room card ───────────────────────────────────────────────────────────── */
-.room-card        { border-radius: 12px; border: 2px solid #1e293b; background: #111827; overflow: hidden; }
-.room-card--ok    { border-color: #166534; }
-.room-card--par   { border-color: #92400e; }
-.room-card--none  { border-color: #7f1d1d; }
-.room-card--closed{ border-color: #312e81; opacity: .75; }
+.room-card__header { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; background: #f9fafb; }
+.room-card__left   { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.room-card__id     { font-weight: 700; font-size: .95rem; color: #0d631b; }
+.room-card__andar  { font-size: .8rem; color: #6b7280; font-weight: 400; }
+.room-card__tipo   { font-size: .72rem; font-weight: 700; color: #5b21b6; background: #ede9fe; padding: .15rem .6rem; margin: .3rem 1rem 0; border-radius: 8px; display: inline-block; }
+.room-card__geral  { padding: .25rem 1rem .4rem; font-size: .8rem; color: #555; }
 
-.rc-head    { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; background: #1e293b; }
-.rc-name    { font-size: 1rem; font-weight: 800; color: #4ade80; }
-.rc-andar   { font-size: .82rem; color: #64748b; }
-.rc-status-icon { font-size: 1.2rem; }
-.rc-tipo    { font-size: .72rem; font-weight: 700; color: #a78bfa; background: #1e1b4b; padding: .2rem .6rem; margin: .3rem 1rem 0; border-radius: 6px; display: inline-block; }
+/* Trabalhos */
+.room-card__works { padding: .4rem 1rem .6rem; border-top: 1px solid #f3f4f6; }
+.work-item  { display: flex; gap: .4rem; align-items: flex-start; margin-bottom: .25rem; }
+.work-num   { font-size: .78rem; color: #9ca3af; font-weight: 700; min-width: 16px; }
+.work-titulo { font-size: .88rem; font-weight: 600; color: #111; }
+.work-curso  { font-size: .75rem; color: #6b7280; }
 
-.rc-works   { padding: .5rem 1rem; border-bottom: 1px solid #1e293b; }
-.rc-work-item { display: flex; gap: .4rem; align-items: flex-start; margin-bottom: .3rem; }
-.rc-work-num  { font-size: .78rem; color: #64748b; font-weight: 700; min-width: 16px; }
-.rc-work-titulo { font-size: .85rem; color: #e2e8f0; font-weight: 600; }
-.rc-work-curso  { font-size: .75rem; color: #64748b; }
+/* Eval */
+.eval-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid #f3f4f6; }
+.eval-block { padding: .6rem .75rem; display: flex; flex-direction: column; gap: 2px; }
+.eval-block + .eval-block { border-left: 1px solid #f3f4f6; }
+.eval-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; color: #9ca3af; }
+.eval-count { font-size: 1.1rem; font-weight: 800; }
+.eval-badge { font-size: .75rem; }
+.badge--complete { background: #f0fdf4; }
+.badge--partial  { background: #fffbeb; }
+.badge--none     { background: #fef2f2; }
+.badge--closed   { background: #e0e7ff; color: #4338ca; }
 
-.rc-eval-row   { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #1e293b; }
-.rc-eval-block { padding: .5rem .75rem; }
-.rc-eval-block + .rc-eval-block { border-left: 1px solid #1e293b; }
-.rc-eval-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: #64748b; display: block; }
-.rc-eval-count { font-size: 1.1rem; font-weight: 800; display: block; }
-.rc-eval--completo     .rc-eval-count { color: #4ade80; }
-.rc-eval--parcial      .rc-eval-count { color: #fbbf24; }
-.rc-eval--nao_iniciado .rc-eval-count { color: #f87171; }
+/* Banca */
+.room-card__banca-row { display: flex; flex-wrap: wrap; gap: .3rem; padding: .5rem 1rem; border-top: 1px solid #f3f4f6; }
+.banca-chip { font-size: .75rem; background: #f3f4f6; border-radius: 20px; padding: .15rem .55rem; color: #374151; }
 
-.rc-banca      { padding: .5rem 1rem; display: flex; flex-wrap: wrap; gap: .3rem; }
-.rc-banca-name { font-size: .75rem; background: #1e293b; border-radius: 20px; padding: .15rem .55rem; color: #cbd5e1; }
-
-/* ── Empty/Loading ─────────────────────────────────────────────────────── */
-.empty-state   { text-align: center; padding: 4rem; }
-.empty-text    { font-size: 1.2rem; color: #94a3b8; font-weight: 600; }
-.empty-hint    { font-size: .9rem; color: #475569; margin-top: .5rem; }
-.loading-state { text-align: center; padding: 3rem; color: #64748b; }
+/* Empty/loading */
+.empty-state   { text-align: center; padding: 3rem; color: #9ca3af; }
+.loading-state { text-align: center; padding: 2rem; color: #9ca3af; }
 </style>

@@ -124,12 +124,19 @@ export default function SalaScreen() {
 
       {/* Cabeçalho */}
       <View style={s.salaHeader}>
-        <Text style={s.salaId}>Sala {room.id}</Text>
+        <Text style={s.salaId}>
+          {room.hall ? `Sala ${room.hall.nome}` : `Sala #${room.id}`}
+        </Text>
         {room.fechada && <View style={s.fechadaBadge}><Text style={s.fechadaText}>🔒 Fechada</Text></View>}
         {room.tipoSala && room.tipoSala !== 'Geral' && (
           <View style={s.tipoBadge}><Text style={s.tipoText}>{room.tipoSala}</Text></View>
         )}
       </View>
+      {(room.hall?.andar || room.hall?.setor?.nome) && (
+        <Text style={s.hallSub}>
+          {[room.hall.setor?.nome, room.hall.andar].filter(Boolean).join(' · ')}
+        </Text>
+      )}
       <Text style={s.date}>
         {new Date(room.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR', {
           weekday: 'long', day: 'numeric', month: 'long',
@@ -295,7 +302,8 @@ const s = StyleSheet.create({
   back:           { marginBottom: 14 },
   backText:       { color: '#0d631b', fontSize: 14, fontWeight: '600' },
   salaHeader:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' },
-  salaId:         { fontSize: 22, fontWeight: '900', color: '#0d631b' },
+  salaId:         { fontSize: 22, fontWeight: '900', color: '#0d631b', flexShrink: 1 },
+  hallSub:        { fontSize: 13, color: '#6b7280', marginBottom: 2, marginTop: -2 },
   fechadaBadge:   { backgroundColor: '#e0e7ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   fechadaText:    { color: '#4338ca', fontWeight: '700', fontSize: 12 },
   tipoBadge:      { backgroundColor: '#ede9fe', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
