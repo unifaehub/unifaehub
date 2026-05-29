@@ -10,6 +10,7 @@ import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.en
 import { EvaluationEntity } from '../../../database/entities/evaluation.entity';
 import { WorkGroupEntity } from '../../../database/entities/work-group.entity';
 import { ProfessorAvailabilityEntity } from '../../../database/entities/professor-availability.entity';
+import { RoomWorkEntity } from '../../../database/entities/room-work.entity';
 
 class UpsertConfigDto {
   eventoNome?: string | null;
@@ -49,6 +50,8 @@ export class JornadaConfigService {
     private readonly workGroups: Repository<WorkGroupEntity>,
     @InjectRepository(ProfessorAvailabilityEntity)
     private readonly availabilities: Repository<ProfessorAvailabilityEntity>,
+    @InjectRepository(RoomWorkEntity)
+    private readonly roomWorks: Repository<RoomWorkEntity>,
   ) {}
 
   // ── Config (singleton) ────────────────────────────────────────────────────
@@ -85,24 +88,29 @@ export class JornadaConfigService {
     const datas = cfg.datasEvento ?? [];
 
     // 1. Salas existentes
-    const allRooms = await this.rooms.find({ select: ['id', 'trabalhoId'] });
+    const allRooms = await this.rooms.find({ select: ['id'] });
     if (allRooms.length) {
-      const roomIds     = allRooms.map((r) => r.id);
-      const trabalhoIds = allRooms.map((r) => r.trabalhoId);
+      const roomIds = allRooms.map((r) => r.id);
 
-      // 2. Avaliações (trabalho_id IN trabalhos das salas)
+      // 2. Trabalhos via room_works
+      const rws         = await this.roomWorks.find({ where: { salaId: In(roomIds) as any } });
+      const trabalhoIds = rws.map((rw) => rw.trabalhoId);
+
+      // 3. Avaliações
       if (trabalhoIds.length) {
         await this.evaluations.delete({ trabalhoId: In(trabalhoIds) });
       }
-      // 3. Banca das salas
+      // 4. Banca das salas
       await this.roomProfessors.delete({ salaId: In(roomIds) });
-      // 4. Melhores trabalhos
+      // 5. Melhores trabalhos
       await this.roomBestWorks.delete({ salaId: In(roomIds) });
-      // 5. Grupos de alunos
+      // 6. room_works
+      await this.roomWorks.delete({ salaId: In(roomIds) as any });
+      // 7. Grupos de alunos
       if (trabalhoIds.length) {
         await this.workGroups.delete({ trabalhoId: In(trabalhoIds) });
       }
-      // 6. Salas
+      // 8. Salas
       await this.rooms.delete({ id: In(roomIds) });
     }
 

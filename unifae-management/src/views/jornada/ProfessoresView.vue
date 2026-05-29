@@ -2,7 +2,7 @@
 import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApiRequest } from '@/composables/useApiRequest'
 import { useToastStore } from '@/stores/toast'
@@ -73,10 +73,20 @@ type Availability = {
 const toast = useToastStore()
 const confirm = useConfirmStore()
 
-const filterDate = ref('')
+// Datas do evento — carregadas da config para o seletor de disponibilidade
+const eventDates = ref<string[]>([])
+async function loadEventDates() {
+  try {
+    const { data } = await client.get('/evidence-journey/config')
+    eventDates.value = (data.datasEvento ?? []).slice().sort()
+  } catch { /* silencioso */ }
+}
+onMounted(loadEventDates)
+
+const filterDate    = ref('')
 const newProfessorId = ref<number | ''>('')
-const newDataEvento = ref('')
-const adding = ref(false)
+const newDataEvento  = ref('')
+const adding        = ref(false)
 
 const { data: professors, loading: loadingProfs, failed: failedProfs, execute: reloadProfs } = useApiRequest<Professor[]>(async () => {
   const { data } = await client.get('/evidence-journey/professors')
@@ -229,7 +239,13 @@ async function removeAvailability(id: number) {
             <option value="">Selecionar professor…</option>
             <option v-for="p in professors ?? []" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
-          <input v-model="newDataEvento" type="date" class="input-field" />
+          <select v-if="eventDates.length" v-model="newDataEvento" class="select-field">
+            <option value="">Selecionar data do evento…</option>
+            <option v-for="d in eventDates" :key="d" :value="d">
+              {{ new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) }}
+            </option>
+          </select>
+          <input v-else v-model="newDataEvento" type="date" class="input-field" :title="'Configure as datas do evento em Configurações'" />
           <button class="btn btn--primary" :disabled="adding" @click="addAvailability">
             {{ adding ? 'Adicionando…' : 'Adicionar' }}
           </button>

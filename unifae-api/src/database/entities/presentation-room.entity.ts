@@ -10,8 +10,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
-import { EvidenceWorkEntity } from './evidence-work.entity';
 import { RoomProfessorEntity } from './room-professor.entity';
+import { RoomWorkEntity } from './room-work.entity';
+import { RoomType } from './enums';
 
 @Entity('presentation_rooms')
 @Index(['dataEvento'])
@@ -23,12 +24,15 @@ export class PresentationRoomEntity {
   @Column({ name: 'data_evento', type: 'date' })
   dataEvento: string;
 
-  @Column({ name: 'trabalho_id' })
-  trabalhoId: number;
-
-  @ManyToOne(() => EvidenceWorkEntity, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'trabalho_id' })
-  trabalho: EvidenceWorkEntity;
+  /** Tipo da sala — define max de trabalhos e quais categorias aceita. */
+  @Column({
+    name: 'tipo_sala',
+    type: 'enum',
+    enum: RoomType,
+    nullable: true,
+    default: RoomType.GERAL,
+  })
+  tipoSala: RoomType | null;
 
   @Column({ name: 'professor_lider_id' })
   professorLiderId: number;
@@ -42,6 +46,10 @@ export class PresentationRoomEntity {
 
   @OneToMany(() => RoomProfessorEntity, (rp) => rp.sala)
   banca: RoomProfessorEntity[];
+
+  /** Trabalhos atribuídos a esta sala (via room_works). */
+  @OneToMany(() => RoomWorkEntity, (rw) => rw.sala)
+  works: RoomWorkEntity[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

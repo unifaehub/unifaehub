@@ -6,6 +6,7 @@ import { WorkGroupEntity } from '../../database/entities/work-group.entity';
 import { PresentationRoomEntity } from '../../database/entities/presentation-room.entity';
 import { RoomProfessorEntity } from '../../database/entities/room-professor.entity';
 import { RoomBestWorkEntity } from '../../database/entities/room-best-work.entity';
+import { RoomWorkEntity } from '../../database/entities/room-work.entity';
 import { DynamicQuestionEntity } from '../../database/entities/dynamic-question.entity';
 import { EvaluationEntity } from '../../database/entities/evaluation.entity';
 import { KeywordEntity } from '../../database/entities/keyword.entity';
@@ -42,6 +43,7 @@ import { AuditModule } from '../audit/audit.module';
       PresentationRoomEntity,
       RoomProfessorEntity,
       RoomBestWorkEntity,
+      RoomWorkEntity,
       DynamicQuestionEntity,
       EvaluationEntity,
       KeywordEntity,

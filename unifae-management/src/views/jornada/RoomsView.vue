@@ -60,7 +60,6 @@ async function load() {
 }
 
 function printReport() {
-  // Abrir janela de impressão com HTML formatado para PDF
   const win = window.open('', '_blank', 'width=900,height=700')
   if (!win) return
 
@@ -68,54 +67,71 @@ function printReport() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  const rows = rooms.value.map((r, i) => `
-    <tr style="page-break-inside:avoid">
-      <td style="font-weight:700;vertical-align:top;padding:10px 8px;border:1px solid #ccc">#${r.id}</td>
-      <td style="padding:10px 8px;border:1px solid #ccc">
-        <div style="font-weight:700;margin-bottom:4px">${r.trabalho?.titulo ?? '—'}</div>
-        <div style="color:#555;font-size:12px">${r.trabalho?.cursoTrabalho ?? ''} · Aluno: ${r.trabalho?.aluno?.name ?? '—'}</div>
-      </td>
-      <td style="padding:10px 8px;border:1px solid #ccc;vertical-align:top">
-        ${(r.banca ?? []).map((rp) =>
-          `<div>${rp.professor.name}${r.professorLider?.id === rp.professor.id ? ' 👑' : ''}</div>`
-        ).join('')}
-      </td>
-      <td style="padding:10px 8px;border:1px solid #ccc;text-align:center;vertical-align:top">
-        <span style="background:${r.fechada ? '#e0e7ff' : '#dcfce7'};padding:3px 10px;border-radius:12px;font-size:12px">
-          ${r.fechada ? '🔒 Fechada' : '✅ Aberta'}
-        </span>
-      </td>
-    </tr>
-  `).join('')
+  // Uma página por sala
+  const pages = rooms.value.map((r, idx) => {
+    const worksRows = ((r as any).works ?? []).map((rw: any, wi: number) => `
+      <tr>
+        <td style="padding:8px;border:1px solid #ddd;font-size:12px;color:#555">${wi + 1}</td>
+        <td style="padding:8px;border:1px solid #ddd">
+          <div style="font-weight:700;font-size:13px">${rw.trabalho?.titulo ?? '—'}</div>
+          <div style="color:#555;font-size:11px;margin-top:3px">${rw.trabalho?.cursoTrabalho ?? ''} · Aluno: ${rw.trabalho?.aluno?.name ?? '—'}</div>
+        </td>
+      </tr>
+    `).join('')
+
+    const bancaList = (r.banca ?? []).map((rp) =>
+      `<li style="margin-bottom:4px">${rp.professor.name}${r.professorLider?.id === rp.professor.id ? ' <span style="background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700">Líder</span>' : ''}</li>`
+    ).join('')
+
+    const statusBg = r.fechada ? '#e0e7ff' : '#dcfce7'
+    const statusTx = r.fechada ? '🔒 Sala Fechada' : '✅ Sala Aberta'
+
+    return `
+      <div style="page-break-after:${idx < rooms.value.length - 1 ? 'always' : 'auto'};padding:32px 40px;font-family:Arial,sans-serif;font-size:13px">
+        <!-- Cabeçalho -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:2px solid #0d631b;padding-bottom:12px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#0d631b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Jornada de Evidências e Mostra de Jogos</div>
+            <div style="font-size:20px;font-weight:900;color:#111">Sala #${r.id}</div>
+            <div style="font-size:12px;color:#555;margin-top:4px">${eventDate}${(r as any).tipoSala && (r as any).tipoSala !== 'Geral' ? ' · ' + (r as any).tipoSala : ''}</div>
+          </div>
+          <span style="background:${statusBg};padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700">${statusTx}</span>
+        </div>
+
+        <!-- Trabalhos -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:8px">Trabalhos</div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f3f4f6">
+                <th style="padding:8px;border:1px solid #ddd;text-align:left;font-size:11px;width:30px">#</th>
+                <th style="padding:8px;border:1px solid #ddd;text-align:left;font-size:11px">Título · Curso · Aluno</th>
+              </tr>
+            </thead>
+            <tbody>${worksRows || '<tr><td colspan="2" style="padding:12px;text-align:center;color:#9ca3af;font-size:12px">—</td></tr>'}</tbody>
+          </table>
+        </div>
+
+        <!-- Banca -->
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:8px">Banca Avaliadora</div>
+          <ul style="margin:0;padding-left:20px;list-style:disc">${bancaList}</ul>
+        </div>
+
+        <div style="margin-top:32px;font-size:10px;color:#bbb;text-align:right">
+          Gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>
+      </div>
+    `
+  }).join('')
 
   win.document.write(`
     <!DOCTYPE html><html><head>
     <meta charset="utf-8">
-    <title>Relatório de Salas — ${eventDate}</title>
-    <style>
-      body { font-family: Arial, sans-serif; padding: 24px; font-size: 13px; }
-      h1 { font-size: 18px; margin-bottom: 4px; }
-      h2 { font-size: 14px; color: #555; font-weight: normal; margin-bottom: 20px; }
-      table { width: 100%; border-collapse: collapse; }
-      th { background: #0d631b; color: #fff; padding: 8px; text-align: left; font-size: 12px; }
-      tr:nth-child(even) td { background: #f9f9f9; }
-      @media print { @page { size: A4; margin: 1.5cm; } }
-    </style>
+    <title>Relatório de Bancas — ${eventDate}</title>
+    <style>@media print { @page { size: A4; margin: 0; } body { margin: 0; } }</style>
     </head><body>
-    <h1>🎓 Jornada Científica e Mostra de Jogos</h1>
-    <h2>Relatório de Bancas — ${eventDate}</h2>
-    <table>
-      <thead><tr>
-        <th style="width:60px">Sala</th>
-        <th>Trabalho</th>
-        <th style="width:220px">Banca</th>
-        <th style="width:90px">Status</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div style="margin-top:24px;font-size:11px;color:#888">
-      Gerado em ${new Date().toLocaleString('pt-BR')} · ${rooms.value.length} sala(s)
-    </div>
+    ${pages}
     <script>window.onload = () => { window.print(); }<\/script>
     </body></html>
   `)

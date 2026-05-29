@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +33,17 @@ export default function AvaliacaoTipoScreen() {
   const [answers, setAnswers]   = useState<Record<number, number>>({}); // perguntaId → nota
   const [comment, setComment]   = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!successMsg) return;
+    Animated.sequence([
+      Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(1800),
+      Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start(() => router.back());
+  }, [successMsg]);
 
   const total   = filteredQs.length;
   const current = filteredQs[currentIdx];
@@ -68,9 +79,7 @@ export default function AvaliacaoTipoScreen() {
         comentario: comment.trim() || undefined,
       });
       qc.invalidateQueries({ queryKey: ['eval-status', salaNum] });
-      Alert.alert('✅ Enviado!', `Avaliação de ${tipoLabel} enviada com sucesso.`, [
-        { text: 'Voltar', onPress: () => router.back() },
-      ]);
+      setSuccessMsg(`Avaliação de ${tipoLabel} enviada!`);
     } catch (e: any) {
       Alert.alert('Erro', e?.response?.data?.message ?? 'Não foi possível enviar.');
     } finally {
@@ -93,6 +102,13 @@ export default function AvaliacaoTipoScreen() {
 
   return (
     <View style={s.container}>
+      {/* Toast de sucesso */}
+      {successMsg && (
+        <Animated.View style={[s.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+          <Text style={s.toastText}>✅ {successMsg}</Text>
+        </Animated.View>
+      )}
+
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -227,4 +243,6 @@ const s = StyleSheet.create({
   dot:          { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e5e7eb' },
   dotActive:    { backgroundColor: '#0d631b', width: 20 },
   dotDone:      { backgroundColor: '#86efac' },
+  toast:        { position: 'absolute', top: 60, left: 20, right: 20, backgroundColor: '#0d631b', borderRadius: 14, padding: 16, zIndex: 999, shadowColor: '#000', shadowOpacity: .18, shadowRadius: 12, elevation: 8 },
+  toastText:    { color: '#fff', fontWeight: '800', fontSize: 16, textAlign: 'center' },
 });

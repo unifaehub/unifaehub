@@ -1,11 +1,19 @@
 import { apiClient } from './client';
 
+export type RoomWork = {
+  id: number;
+  trabalhoId: number;
+  ordem: number;
+  trabalho: { id: number; titulo: string; cursoTrabalho: string; aluno: { name: string } | null };
+};
+
 export type Room = {
   id: number;
   dataEvento: string;
-  trabalho: { id: number; titulo: string; cursoTrabalho: string; aluno: { name: string } | null } | null;
+  tipoSala: string | null;
   professorLider: { id: number; name: string } | null;
   banca: { professor: { id: number; name: string } }[];
+  works: RoomWork[];
   fechada: boolean;
 };
 
@@ -23,12 +31,20 @@ export type Keyword = {
   horaInicio: string;
 } | null;
 
-export type MyEvalStatus = {
-  salaId: number;
+export type WorkEvalStatus = {
   trabalhoId: number;
-  fechada: boolean;
+  titulo: string;
+  cursoTrabalho: string;
+  alunoNome: string | null;
   statusApresentacao: 'Presente' | 'Ausente' | 'Indeferido' | null;
   submittedPerguntaIds: number[];
+  ordem: number;
+};
+
+export type MyRoomStatus = {
+  salaId: number;
+  fechada: boolean;
+  works: WorkEvalStatus[];
 };
 
 export const jornadaApi = {
@@ -47,7 +63,7 @@ export const jornadaApi = {
     return data;
   },
 
-  getMyEvalStatus: async (salaId: number): Promise<MyEvalStatus> => {
+  getMyEvalStatus: async (salaId: number): Promise<MyRoomStatus> => {
     const { data } = await apiClient.get(`/evidence-journey/rooms/${salaId}/my-status`);
     return data;
   },

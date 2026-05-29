@@ -27,7 +27,7 @@ export class LotteryController {
     @Req() req: Request,
   ) {
     const ctx = getRequestContext(req);
-    return this.service.runLottery(dto.dataEvento, user.id, ctx);
+    return this.service.runLottery(dto.dataEvento, user.id, dto.tiposSala, ctx);
   }
 
   @Get('rooms')

@@ -72,6 +72,14 @@ export enum WorkType {
   DESENVOLVIMENTO_PRATICO = 'Desenvolvimento Prático',
 }
 
+export enum RoomType {
+  GERAL        = 'Geral',
+  MOSTRA_JOGOS = 'Mostra de Jogos',
+  PRATICO      = 'Desenvolvimento Prático',
+  ARTIGO_TCC   = 'Artigo / TCC',
+  IC           = 'Iniciação Científica',
+}
+
 export enum EvidenceWorkStatus {
   PENDENTE = 'Pendente',
   APROVADO = 'Aprovado',

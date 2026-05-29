@@ -42,16 +42,19 @@ export default function FechamentoScreen() {
         Esta ação é irreversível.
       </Text>
 
-      {room && (
+      {room && (room.works ?? []).length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Selecionar Melhor Trabalho</Text>
           <Text style={styles.sectionDesc}>Obrigatório para o líder da banca.</Text>
-          <TouchableOpacity
-            style={[styles.trabalhoBtn, melhorId === room.trabalho?.id && styles.trabalhoSelected]}
-            onPress={() => setMelhorId(room.trabalho?.id ?? null)}
-          >
-            <Text style={styles.trabalhoBtnText}>{room.trabalho?.titulo}</Text>
-          </TouchableOpacity>
+          {(room.works ?? []).map((rw) => (
+            <TouchableOpacity
+              key={rw.trabalhoId}
+              style={[styles.trabalhoBtn, melhorId === rw.trabalhoId && styles.trabalhoSelected, { marginBottom: 8 }]}
+              onPress={() => setMelhorId(rw.trabalhoId)}
+            >
+              <Text style={styles.trabalhoBtnText}>{rw.trabalho?.titulo}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
 

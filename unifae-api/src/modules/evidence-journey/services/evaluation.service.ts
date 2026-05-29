@@ -10,6 +10,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { EvaluationEntity } from '../../../database/entities/evaluation.entity';
 import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
+import { RoomWorkEntity } from '../../../database/entities/room-work.entity';
 import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.entity';
 import { DynamicQuestionEntity } from '../../../database/entities/dynamic-question.entity';
 import { UserEntity } from '../../../database/entities/user.entity';
@@ -26,6 +27,8 @@ export class EvaluationService {
     private readonly evaluations: Repository<EvaluationEntity>,
     @InjectRepository(PresentationRoomEntity)
     private readonly rooms: Repository<PresentationRoomEntity>,
+    @InjectRepository(RoomWorkEntity)
+    private readonly roomWorks: Repository<RoomWorkEntity>,
     @InjectRepository(RoomBestWorkEntity)
     private readonly bestWorks: Repository<RoomBestWorkEntity>,
     @InjectRepository(DynamicQuestionEntity)
@@ -37,21 +40,24 @@ export class EvaluationService {
   ) {}
 
   async getMyRooms(professorId: number) {
-    return this.rooms
+    const rooms = await this.rooms
       .createQueryBuilder('r')
-      // Filtrar somente salas onde o professor faz parte da banca
       .andWhere(
         'r.id IN (SELECT rp.sala_id FROM room_professors rp WHERE rp.professor_id = :pid)',
         { pid: professorId },
       )
-      .leftJoinAndSelect('r.trabalho', 'w')
+      .leftJoinAndSelect('r.works', 'rw')
+      .leftJoinAndSelect('rw.trabalho', 'w')
       .leftJoinAndSelect('w.aluno', 'a')
       .leftJoinAndSelect('r.banca', 'banca')
       .leftJoinAndSelect('banca.professor', 'bancaProf')
       .leftJoinAndSelect('r.professorLider', 'lider')
       .where('r.fechada = false')
       .orderBy('r.dataEvento', 'ASC')
+      .addOrderBy('rw.ordem', 'ASC')
       .getMany();
+
+    return rooms;
   }
 
   async submitEvaluation(
@@ -70,11 +76,10 @@ export class EvaluationService {
     const isProfessorInRoom = room.banca.some((rp) => rp.professorId === professorId);
     if (!isProfessorInRoom) throw new ForbiddenException('Você não pertence a esta sala.');
 
-    if (room.trabalhoId !== trabalhoId) {
-      throw new BadRequestException('Trabalho não pertence a esta sala.');
-    }
+    // Validar que o trabalho pertence a esta sala
+    const rw = await this.roomWorks.findOne({ where: { salaId, trabalhoId } });
+    if (!rw) throw new BadRequestException('Trabalho não pertence a esta sala.');
 
-    // 1. Se já marcado Ausente/Indeferido — bloquear qualquer nova submissão
     const statusRecord = await this.evaluations.findOne({
       where: { trabalhoId, professorId, perguntaId: IsNull() },
     });
@@ -84,7 +89,6 @@ export class EvaluationService {
       );
     }
 
-    // 2. Ausente/Indeferido: salvar apenas registro de status
     if (dto.statusApresentacao !== PresentationStatus.PRESENTE) {
       await this.evaluations
         .createQueryBuilder()
@@ -101,7 +105,6 @@ export class EvaluationService {
       return { saved: 1 };
     }
 
-    // 3. Presente: verificar duplicatas apenas das perguntas enviadas (permite Resumo + Apresentação separados)
     if (!dto.respostas?.length) {
       throw new BadRequestException('Respostas são obrigatórias para status Presente.');
     }
@@ -137,33 +140,43 @@ export class EvaluationService {
   }
 
   /**
-   * Retorna os IDs de perguntas já respondidas pelo professor para um trabalho.
-   * Usado pelo app mobile para saber quais tipos já foram enviados.
+   * Retorna status de avaliação do professor para TODOS os trabalhos da sala.
    */
   async getMyEvalStatus(salaId: number, professorId: number) {
-    const room = await this.rooms.findOne({ where: { id: salaId }, select: ['id', 'trabalhoId', 'fechada'] });
+    const room = await this.rooms.findOne({
+      where: { id: salaId },
+      select: ['id', 'fechada'],
+    });
     if (!room) throw new NotFoundException('Sala não encontrada.');
 
-    const evals = await this.evaluations.find({
-      where: { trabalhoId: room.trabalhoId, professorId },
-      relations: ['pergunta'],
+    const rws = await this.roomWorks.find({
+      where: { salaId },
+      relations: ['trabalho', 'trabalho.aluno'],
+      order: { ordem: 'ASC' },
     });
 
-    const submittedPerguntaIds = evals
-      .filter((e) => e.perguntaId != null)
-      .map((e) => e.perguntaId!);
+    const trabIds = rws.map((rw) => rw.trabalhoId);
+    const evals   = trabIds.length
+      ? await this.evaluations.find({ where: { trabalhoId: In(trabIds), professorId } })
+      : [];
 
-    const statusRecord = evals.find((e) => e.perguntaId == null);
+    const works = rws.map((rw) => {
+      const profEvals       = evals.filter((e) => e.trabalhoId === rw.trabalhoId);
+      const statusRecord    = profEvals.find((e) => e.perguntaId == null);
+      const submittedPergIds = profEvals.filter((e) => e.perguntaId != null).map((e) => e.perguntaId!);
 
-    return {
-      salaId,
-      trabalhoId: room.trabalhoId,
-      fechada: room.fechada,
-      statusApresentacao: statusRecord?.statusApresentacao ?? null,
-      submittedPerguntaIds,
-      resumoCompleto: false, // calculado no front com base nas perguntas
-      apresentacaoCompleta: false,
-    };
+      return {
+        trabalhoId:          rw.trabalhoId,
+        titulo:              rw.trabalho?.titulo ?? '',
+        cursoTrabalho:       rw.trabalho?.cursoTrabalho ?? '',
+        alunoNome:           rw.trabalho?.aluno?.name ?? null,
+        statusApresentacao:  statusRecord?.statusApresentacao ?? null,
+        submittedPerguntaIds: submittedPergIds,
+        ordem:               rw.ordem,
+      };
+    });
+
+    return { salaId, fechada: room.fechada, works };
   }
 
   async closeRoom(salaId: number, professorId: number, dto: CloseRoomDto) {
@@ -180,29 +193,35 @@ export class EvaluationService {
     const passwordOk = await bcrypt.compare(dto.senha, professor.password);
     if (!passwordOk) throw new UnauthorizedException('Senha incorreta.');
 
-    // Verificar se todos os professores da banca enviaram Resumo e Apresentação
+    // Verificar se todos da banca avaliaram todos os trabalhos da sala
     const activeQuestions = await this.questions.find({ where: { ativo: true } });
-    const bancaProfIds = (room.banca ?? []).map((rp) => rp.professorId);
+    const bancaProfIds    = (room.banca ?? []).map((rp) => rp.professorId);
+    const rws             = await this.roomWorks.find({ where: { salaId } });
+    const trabIds         = rws.map((rw) => rw.trabalhoId);
+
     const evals = await this.evaluations.find({
-      where: { trabalhoId: room.trabalhoId, professorId: In(bancaProfIds) },
+      where: { trabalhoId: In(trabIds), professorId: In(bancaProfIds) },
     });
 
     const missing: string[] = [];
     for (const pid of bancaProfIds) {
-      const profEvals = evals.filter((e) => e.professorId === pid);
-      const statusRec = profEvals.find((e) => e.perguntaId == null);
-      // Se Ausente/Indeferido → OK
-      if (statusRec && statusRec.statusApresentacao !== PresentationStatus.PRESENTE) continue;
+      for (const tid of trabIds) {
+        const profEvals   = evals.filter((e) => e.professorId === pid && e.trabalhoId === tid);
+        const statusRec   = profEvals.find((e) => e.perguntaId == null);
+        if (statusRec && statusRec.statusApresentacao !== PresentationStatus.PRESENTE) continue;
 
-      const answeredIds = new Set(profEvals.filter((e) => e.perguntaId != null).map((e) => e.perguntaId));
-      const missingResumo = activeQuestions.filter((q) => q.tipo === 'Resumo' && !answeredIds.has(q.id));
-      const missingApres  = activeQuestions.filter((q) => q.tipo === 'Apresentação' && !answeredIds.has(q.id));
+        const answeredIds   = new Set(profEvals.filter((e) => e.perguntaId != null).map((e) => e.perguntaId));
+        const missingResumo = activeQuestions.filter((q) => q.tipo === 'Resumo' && !answeredIds.has(q.id));
+        const missingApres  = activeQuestions.filter((q) => q.tipo === 'Apresentação' && !answeredIds.has(q.id));
 
-      const prof = room.banca.find((b) => b.professorId === pid);
-      const profName = (prof as any)?.professor?.name ?? `Prof. #${pid}`;
+        const bancaEntry = room.banca.find((b) => b.professorId === pid);
+        const profName   = (bancaEntry as any)?.professor?.name ?? `Prof. #${pid}`;
+        const rw         = rws.find((r) => r.trabalhoId === tid);
+        const trabLabel  = rw?.trabalho?.titulo ? `"${rw.trabalho.titulo}"` : `#${tid}`;
 
-      if (missingResumo.length)  missing.push(`${profName}: faltam ${missingResumo.length} avaliação(ões) de Resumo`);
-      if (missingApres.length)   missing.push(`${profName}: faltam ${missingApres.length} avaliação(ões) de Apresentação`);
+        if (missingResumo.length) missing.push(`${profName} · ${trabLabel}: faltam ${missingResumo.length} avaliação(ões) de Resumo`);
+        if (missingApres.length)  missing.push(`${profName} · ${trabLabel}: faltam ${missingApres.length} avaliação(ões) de Apresentação`);
+      }
     }
 
     if (missing.length) {
@@ -214,9 +233,7 @@ export class EvaluationService {
     if (dto.melhorTrabalhoId) {
       const existing = await this.bestWorks.findOne({ where: { salaId } });
       if (!existing) {
-        await this.bestWorks.save(
-          this.bestWorks.create({ salaId, trabalhoId: dto.melhorTrabalhoId }),
-        );
+        await this.bestWorks.save(this.bestWorks.create({ salaId, trabalhoId: dto.melhorTrabalhoId }));
       }
     }
 
@@ -227,7 +244,6 @@ export class EvaluationService {
       .where('id = :id', { id: salaId })
       .execute();
 
-    // BullMQ: silencioso se Redis não disponível
     try {
       await this.reportQueue.add('send-report', { salaId, professorId, dataEvento: room.dataEvento });
     } catch (e) {

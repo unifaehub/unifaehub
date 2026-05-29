@@ -2,7 +2,7 @@
 import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
@@ -13,15 +13,34 @@ const confirm = useConfirmStore()
 
 // ── Config ────────────────────────────────────────────────────────────────
 type Config = { eventoNome: string | null; eventoLocal: string | null; datasEvento: string[] | null }
-const config = ref<Config>({ eventoNome: null, eventoLocal: null, datasEvento: null })
+const config      = ref<Config>({ eventoNome: null, eventoLocal: null, datasEvento: null })
+const savedConfig = ref<Config>({ eventoNome: null, eventoLocal: null, datasEvento: null })
 const loadingConfig = ref(false)
-const failedConfig = ref(false)
-const savingConfig = ref(false)
-const newDataInput = ref('')
+const failedConfig  = ref(false)
+const savingConfig  = ref(false)
+const newDataInput  = ref('')
+
+// Desabilitar salvar se não houver alterações
+const hasConfigChanges = computed(() => {
+  const c = config.value
+  const s = savedConfig.value
+  if (c.eventoNome !== s.eventoNome || c.eventoLocal !== s.eventoLocal) return true
+  const cd = [...(c.datasEvento ?? [])].sort().join(',')
+  const sd = [...(s.datasEvento ?? [])].sort().join(',')
+  return cd !== sd
+})
+
+function cloneConfig(c: Config): Config {
+  return { eventoNome: c.eventoNome, eventoLocal: c.eventoLocal, datasEvento: c.datasEvento ? [...c.datasEvento] : null }
+}
 
 async function loadConfig() {
   loadingConfig.value = true; failedConfig.value = false
-  try { const { data } = await client.get('/evidence-journey/config'); config.value = data }
+  try {
+    const { data } = await client.get('/evidence-journey/config')
+    config.value      = data
+    savedConfig.value = cloneConfig(data)
+  }
   catch { failedConfig.value = true }
   finally { loadingConfig.value = false }
 }
@@ -34,6 +53,7 @@ async function saveConfig() {
       eventoLocal: config.value.eventoLocal || null,
       datasEvento: config.value.datasEvento,
     })
+    savedConfig.value = cloneConfig(config.value)
     toast.success('Configurações salvas.')
   } catch { toast.error('Erro ao salvar configurações.') }
   finally { savingConfig.value = false }
@@ -236,7 +256,7 @@ onMounted(() => { loadConfig(); loadSectors() })
           </div>
         </div>
 
-        <button class="btn btn--primary" :disabled="savingConfig" @click="saveConfig">
+        <button class="btn btn--primary" :disabled="savingConfig || !hasConfigChanges" @click="saveConfig">
           {{ savingConfig ? 'Salvando…' : 'Salvar configurações' }}
         </button>
       </UiAsyncPanel>
@@ -352,6 +372,7 @@ onMounted(() => { loadConfig(); loadSectors() })
 .form-group { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; font-size: .87rem; }
 .form-group label { font-weight: 600; font-size: .8rem; color: #374151; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+@media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
 .input-field { padding: .45rem .75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem; }
 .input-field--sm { max-width: 180px; }
 .dates-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }

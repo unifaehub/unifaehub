@@ -71,10 +71,15 @@ onMounted(loadStatus)
     <div class="evento-status" :class="config?.eventoNome ? 'evento-status--ativo' : 'evento-status--vazio'">
       <div v-if="loadingStatus" class="evento-status__loading">Carregando informações do evento…</div>
       <template v-else-if="config?.eventoNome">
-        <div class="evento-status__info">
-          <span class="evento-status__badge">● Evento configurado</span>
-          <strong class="evento-status__nome">{{ config.eventoNome }}</strong>
-          <span v-if="config.eventoLocal" class="evento-status__local">📍 {{ config.eventoLocal }}</span>
+        <div class="evento-status__top">
+          <div class="evento-status__info">
+            <span class="evento-status__badge">● Evento configurado</span>
+            <strong class="evento-status__nome">{{ config.eventoNome }}</strong>
+            <span v-if="config.eventoLocal" class="evento-status__local">📍 {{ config.eventoLocal }}</span>
+          </div>
+          <button class="btn-config" @click="router.push({ name: 'jornada-config' })" title="Editar configurações do evento">
+            ✏️ Editar
+          </button>
         </div>
         <div class="evento-status__datas" v-if="config.datasEvento?.length">
           <span v-for="d in config.datasEvento" :key="d" class="data-chip" :class="{ 'data-chip--proxima': d === proximaData }">
@@ -114,7 +119,10 @@ onMounted(loadStatus)
 .evento-status--ativo  { background: #f0fdf4; border: 1px solid #bbf7d0; }
 .evento-status--vazio  { background: #fefce8; border: 1px solid #fde68a; }
 .evento-status__loading { color: #6b7280; font-size: .9rem; }
-.evento-status__info { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-bottom: .5rem; }
+.evento-status__top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .5rem; flex-wrap: wrap; gap: .5rem; }
+.evento-status__info { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; }
+.btn-config { background: #fff; border: 1px solid #bbf7d0; border-radius: 6px; padding: .3rem .75rem; font-size: .82rem; font-weight: 600; cursor: pointer; color: #166534; white-space: nowrap; }
+.btn-config:hover { background: #f0fdf4; }
 .evento-status__badge { font-size: .75rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: .04em; }
 .evento-status__nome  { font-weight: 700; font-size: 1rem; color: #111; }
 .evento-status__local { font-size: .85rem; color: #555; }
