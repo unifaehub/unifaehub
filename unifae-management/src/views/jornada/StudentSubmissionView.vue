@@ -52,25 +52,39 @@ async function fetchPublicConfig() {
   } catch { /* silencioso */ }
 }
 
+// ── Cursos (para filtro de professor) ────────────────────────────────
+type Course = { id: number; name: string }
+const courses      = ref<Course[]>([])
+const courseFilter = ref<number | ''>('')
+
 // ── Professores ──────────────────────────────────────────────────────
 const professors       = ref<Professor[]>([])
 const professorsLoad   = ref(false)
 const professorSearch  = ref('')
 const professorsFiltered = computed(() => {
+  let list = professors.value
+  if (courseFilter.value !== '') {
+    const course = courses.value.find(c => c.id === courseFilter.value)
+    if (course) {
+      const name = course.name.toLowerCase()
+      list = list.filter(p => p.cursoBase && p.cursoBase.toLowerCase().includes(name))
+    }
+  }
   const q = professorSearch.value.toLowerCase().trim()
-  if (!q) return professors.value
-  return professors.value.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    (p.cursoBase && p.cursoBase.toLowerCase().includes(q))
-  )
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q))
+  return list
 })
 
 async function fetchProfessors() {
   if (professors.value.length) return
   professorsLoad.value = true
   try {
-    const { data } = await client.get<Professor[]>('/evidence-journey/public/professors')
-    professors.value = data
+    const [profRes, courseRes] = await Promise.allSettled([
+      client.get<Professor[]>('/evidence-journey/public/professors'),
+      client.get<Course[]>('/evidence-journey/public/courses'),
+    ])
+    if (profRes.status === 'fulfilled')   professors.value = profRes.value.data
+    if (courseRes.status === 'fulfilled') courses.value    = courseRes.value.data
   } catch { /* silencioso */ }
   finally { professorsLoad.value = false }
 }
@@ -504,7 +518,13 @@ async function submitWork() {
             <label>Selecione o orientador</label>
             <div v-if="professorsLoad" class="hint hint--loading">Carregando professores…</div>
             <template v-else>
-              <input v-model="professorSearch" type="text" class="input-field" placeholder="Filtrar por nome ou curso…" style="margin-bottom:.35rem" :disabled="submitting" />
+              <div class="prof-filters">
+                <select v-model="courseFilter" class="input-field" :disabled="submitting">
+                  <option value="">Todos os cursos</option>
+                  <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+                <input v-model="professorSearch" type="text" class="input-field" placeholder="Buscar por nome…" :disabled="submitting" />
+              </div>
               <select class="input-field" :disabled="submitting"
                 :value="orientadorId"
                 @change="onOrientadorSelect(+($event.target as HTMLSelectElement).value || '')"
@@ -545,6 +565,13 @@ async function submitWork() {
 
             <!-- Interno: selecionar professor -->
             <div v-if="co.tipo === 'interno'" class="form-group mb-0">
+              <div class="prof-filters">
+                <select v-model="courseFilter" class="input-field" :disabled="submitting">
+                  <option value="">Todos os cursos</option>
+                  <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+                <input v-model="professorSearch" type="text" class="input-field" placeholder="Buscar por nome…" :disabled="submitting" />
+              </div>
               <select class="input-field" :disabled="submitting || professorsLoad"
                 :value="co.professorId"
                 @change="onCoorientadorProfSelect(idx, +($event.target as HTMLSelectElement).value || '')"
@@ -737,6 +764,8 @@ async function submitWork() {
 .alert { padding: .65rem 1rem; border-radius: 8px; font-size: .88rem; font-weight: 600; margin-bottom: 1rem; }
 .alert--ok   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .alert--err  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.prof-filters { display: flex; gap: .4rem; margin-bottom: .35rem; flex-wrap: wrap; }
+.prof-filters .input-field { flex: 1; min-width: 140px; }
 .apresentacao-block { margin-top: .25rem; }
 .notify-info { font-size: .82rem; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: .6rem .9rem; margin-top: .75rem; }
 .alert--warn { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }

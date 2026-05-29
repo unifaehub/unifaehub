@@ -26,6 +26,12 @@ export class PublicWorksController {
     return this.config.getPublicConfig();
   }
 
+  /** Lista cursos ativos para filtro de professor no formulário de submissão. */
+  @Get('courses')
+  listCourses() {
+    return this.works.listPublicCourses();
+  }
+
   /** Lista professores cadastrados para uso no formulário de submissão. */
   @Get('professors')
   listProfessors() {

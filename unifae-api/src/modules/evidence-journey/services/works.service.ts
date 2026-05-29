@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
+import { CourseEntity } from '../../../database/entities/course.entity';
 import { EvidenceWorkStatus, UserRole, WorkCategory, WorkType } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.entity';
@@ -30,6 +31,8 @@ export class WorksService {
     private readonly bestWorks: Repository<RoomBestWorkEntity>,
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    @InjectRepository(CourseEntity)
+    private readonly courses: Repository<CourseEntity>,
     private readonly config: ConfigService,
     private readonly docxGen: EvidenceWorkDocxService,
     private readonly configService: JornadaConfigService,
@@ -442,6 +445,15 @@ export class WorksService {
       order: { dataSubmissao: 'DESC' },
     });
     return works.map((w) => ({ ...w, alunoNome: student.name }));
+  }
+
+  /** Lista cursos ativos — usado pelo filtro de professor no formulário público. */
+  async listPublicCourses() {
+    return this.courses.find({
+      where: { active: true },
+      order: { name: 'ASC' },
+      select: ['id', 'name'],
+    });
   }
 
   /** Lista professores cadastrados — usado pelo formulário público de submissão. */

@@ -15,6 +15,7 @@ import { UserEntity } from '../../database/entities/user.entity';
 import { JornadaConfigEntity } from '../../database/entities/jornada-config.entity';
 import { PresentationSectorEntity } from '../../database/entities/presentation-sector.entity';
 import { PresentationHallEntity } from '../../database/entities/presentation-hall.entity';
+import { CourseEntity } from '../../database/entities/course.entity';
 import { WorksService } from './services/works.service';
 import { LotteryService } from './services/lottery.service';
 import { EvaluationService } from './services/evaluation.service';
@@ -58,7 +59,7 @@ import { AuditModule } from '../audit/audit.module';
       JornadaConfigEntity,
       PresentationSectorEntity,
       PresentationHallEntity,
-      // JornadaConfigService uses these for cascade delete:
+      CourseEntity,
     ]),
     BullModule.registerQueue({ name: 'evidence-report' }),
     IdentityAccessModule,
