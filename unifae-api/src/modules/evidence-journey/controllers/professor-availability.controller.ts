@@ -27,6 +27,11 @@ class AddAvailabilityDto {
   dataEvento: string;
 }
 
+class AutoRegisterDto {
+  @IsDateString()
+  dataEvento: string;
+}
+
 class SetScheduleDto {
   @IsOptional()
   @IsArray()
@@ -47,6 +52,13 @@ export class ProfessorAvailabilityController {
     return this.service.listProfessors();
   }
 
+  /** Professores NÃO cadastrados para a data com disponibilidade semanal compatível. */
+  @Get('eligible')
+  @Roles(...JORNADA_ADMIN_ROLES)
+  getEligible(@Query('dataEvento') dataEvento: string) {
+    return this.service.getEligibleForDate(dataEvento);
+  }
+
   @Get('availabilities')
   @Roles(...JORNADA_ADMIN_ROLES)
   getAvailabilities(@Query('dataEvento') dataEvento?: string) {
@@ -57,6 +69,13 @@ export class ProfessorAvailabilityController {
   @Roles(...JORNADA_ADMIN_ROLES)
   addAvailability(@Body() dto: AddAvailabilityDto) {
     return this.service.addAvailability(dto.professorId, dto.dataEvento);
+  }
+
+  /** Registra automaticamente todos os professores elegíveis para a data. */
+  @Post('availabilities/auto')
+  @Roles(...JORNADA_ADMIN_ROLES)
+  autoRegister(@Body() dto: AutoRegisterDto) {
+    return this.service.autoRegister(dto.dataEvento);
   }
 
   @Delete('availabilities/:id')
