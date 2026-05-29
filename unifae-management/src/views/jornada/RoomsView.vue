@@ -155,6 +155,17 @@ watch(dataEvento, () => { load(); startTimer() })
 onMounted(() => startTimer())
 onUnmounted(() => stopTimer())
 
+// ── Link público ──────────────────────────────────────────────────────────────
+const publicUrl = `${window.location.origin}/jornada/ao-vivo`
+const linkCopied = ref(false)
+async function copyPublicLink() {
+  try {
+    await navigator.clipboard.writeText(publicUrl)
+    linkCopied.value = true
+    setTimeout(() => { linkCopied.value = false }, 2500)
+  } catch { /* fallback: selecionar o texto manualmente */ }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function overallLabel(s: EvalSection['overall'] | 'sem_perguntas'): string {
   if (s === 'completo')     return '✅ Completo'
@@ -195,6 +206,20 @@ function formatTime(d: Date | null) {
         <button class="btn-refresh" :disabled="loading" @click="load">↻</button>
       </div>
       <button v-if="rooms.length" class="btn-pdf" @click="printReport">🖨️ Exportar PDF</button>
+    </div>
+
+    <!-- ── Card link público ─────────────────────────────────────────── -->
+    <div class="public-link-card" @click="copyPublicLink" title="Clique para copiar o link">
+      <div class="plc-left">
+        <span class="plc-icon">📡</span>
+        <div>
+          <p class="plc-title">Link público — Acompanhamento ao vivo</p>
+          <p class="plc-url">{{ publicUrl }}</p>
+        </div>
+      </div>
+      <span class="plc-action" :class="{ 'plc-action--copied': linkCopied }">
+        {{ linkCopied ? '✅ Copiado!' : '📋 Copiar' }}
+      </span>
     </div>
 
     <div v-if="!dataEvento" class="empty-state">Selecione uma data para ver as salas.</div>
@@ -387,6 +412,18 @@ function formatTime(d: Date | null) {
 .detail-list  { margin: 0; padding-left: 1.2rem; font-size: .82rem; color: #374151; }
 .detail-list li { margin-bottom: 2px; }
 .tag-lider { background: #dcfce7; color: #166534; border-radius: 4px; padding: 0 .4rem; font-size: .7rem; font-weight: 700; margin-left: .3rem; }
+
+/* Public link card */
+.public-link-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: .75rem 1rem;
+  margin-bottom: 1.25rem; cursor: pointer; user-select: none; transition: background .15s; }
+.public-link-card:hover { background: #dcfce7; }
+.plc-left  { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.plc-icon  { font-size: 1.4rem; flex-shrink: 0; }
+.plc-title { font-size: .85rem; font-weight: 700; color: #166534; margin: 0 0 .2rem; }
+.plc-url   { font-size: .78rem; color: #166534; opacity: .75; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
+.plc-action { font-size: .82rem; font-weight: 700; color: #166534; white-space: nowrap; padding: .3rem .75rem; border: 1.5px solid #86efac; border-radius: 20px; flex-shrink: 0; }
+.plc-action--copied { background: #16a34a; color: #fff; border-color: #16a34a; }
 
 /* Empty / loading */
 .empty-state   { text-align: center; padding: 3rem; color: #9ca3af; }

@@ -76,6 +76,14 @@ function formatTime(d: Date | null) {
   return d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
 }
 
+/** Professor entregou resumo + apresentação para todos os trabalhos da sala. */
+function profDone(r: RoomStatus, profId: number): boolean {
+  if (r.evaluationStatus.geral === 'nao_iniciado') return false
+  const inResumo = r.evaluationStatus.resumo.pending.some((p) => p.id === profId)
+  const inApres  = r.evaluationStatus.apresentacao.pending.some((p) => p.id === profId)
+  return !inResumo && !inApres
+}
+
 onMounted(() => { load(); timer = setInterval(load, 30_000) })
 onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
@@ -177,10 +185,17 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
             </div>
           </div>
 
-          <!-- Banca -->
+          <!-- Banca — chip verde quando professor completou todas as avaliações -->
           <div class="room-card__banca-row">
-            <span v-for="rp in r.banca" :key="rp.professor.id" class="banca-chip">
+            <span
+              v-for="rp in r.banca"
+              :key="rp.professor.id"
+              class="banca-chip"
+              :class="{ 'banca-chip--done': profDone(r, rp.professor.id) }"
+              :title="profDone(r, rp.professor.id) ? 'Avaliações entregues ✅' : 'Aguardando envio'"
+            >
               {{ rp.professor.name }}{{ rp.professor.id === r.professorLider?.id ? ' 👑' : '' }}
+              <span v-if="profDone(r, rp.professor.id)" class="chip-check">✓</span>
             </span>
           </div>
         </div>
@@ -254,7 +269,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
 /* Banca */
 .room-card__banca-row { display: flex; flex-wrap: wrap; gap: .3rem; padding: .5rem 1rem; border-top: 1px solid #f3f4f6; }
-.banca-chip { font-size: .75rem; background: #f3f4f6; border-radius: 20px; padding: .15rem .55rem; color: #374151; }
+.banca-chip           { font-size: .75rem; background: #f3f4f6; border-radius: 20px; padding: .15rem .55rem; color: #374151; display: flex; align-items: center; gap: .25rem; transition: background .2s, color .2s; }
+.banca-chip--done     { background: #dcfce7; color: #166534; border: 1px solid #86efac; font-weight: 600; }
+.chip-check           { font-size: .7rem; font-weight: 700; }
 
 /* Empty/loading */
 .empty-state   { text-align: center; padding: 3rem; color: #9ca3af; }

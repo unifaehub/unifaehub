@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { jornadaApi, type Room, type WorkEvalStatus } from '../../src/api/jornada';
@@ -10,6 +11,7 @@ import { jornadaApi, type Room, type WorkEvalStatus } from '../../src/api/jornad
 type PresenceStatus = 'Presente' | 'Ausente' | 'Indeferido';
 
 export default function SalaScreen() {
+  const { top: topInset } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const salaId = Number(id);
   const qc     = useQueryClient();
@@ -117,7 +119,7 @@ export default function SalaScreen() {
   });
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
+    <ScrollView style={s.container} contentContainerStyle={[s.content, { paddingTop: topInset + 12 }]}>
       <TouchableOpacity onPress={() => router.back()} style={s.back}>
         <Text style={s.backText}>← Voltar</Text>
       </TouchableOpacity>
@@ -295,7 +297,7 @@ export default function SalaScreen() {
 
 const s = StyleSheet.create({
   container:      { flex: 1, backgroundColor: '#f8fafc' },
-  content:        { padding: 20 },
+  content:        { padding: 20, paddingTop: 20 },
   center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText:      { fontSize: 15, color: '#dc2626' },
   link:           { color: '#0d631b', marginTop: 10, fontSize: 14 },
