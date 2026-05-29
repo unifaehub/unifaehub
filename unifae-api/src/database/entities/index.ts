@@ -38,6 +38,7 @@ export * from './professor-availability.entity';
 export * from './evidence-work.entity';
 export * from './work-group.entity';
 export * from './presentation-room.entity';
+export * from './room-work.entity';
 export * from './room-professor.entity';
 export * from './room-best-work.entity';
 export * from './dynamic-question.entity';
