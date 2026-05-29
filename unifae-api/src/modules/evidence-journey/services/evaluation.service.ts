@@ -122,6 +122,36 @@ export class EvaluationService {
     return { saved: rows.length };
   }
 
+  /**
+   * Retorna os IDs de perguntas já respondidas pelo professor para um trabalho.
+   * Usado pelo app mobile para saber quais tipos já foram enviados.
+   */
+  async getMyEvalStatus(salaId: number, professorId: number) {
+    const room = await this.rooms.findOne({ where: { id: salaId }, select: ['id', 'trabalhoId', 'fechada'] });
+    if (!room) throw new NotFoundException('Sala não encontrada.');
+
+    const evals = await this.evaluations.find({
+      where: { trabalhoId: room.trabalhoId, professorId },
+      relations: ['pergunta'],
+    });
+
+    const submittedPerguntaIds = evals
+      .filter((e) => e.perguntaId != null)
+      .map((e) => e.perguntaId!);
+
+    const statusRecord = evals.find((e) => e.perguntaId == null);
+
+    return {
+      salaId,
+      trabalhoId: room.trabalhoId,
+      fechada: room.fechada,
+      statusApresentacao: statusRecord?.statusApresentacao ?? null,
+      submittedPerguntaIds,
+      resumoCompleto: false, // calculado no front com base nas perguntas
+      apresentacaoCompleta: false,
+    };
+  }
+
   async closeRoom(salaId: number, professorId: number, dto: CloseRoomDto) {
     const room = await this.rooms.findOne({
       where: { id: salaId, professorLiderId: professorId },

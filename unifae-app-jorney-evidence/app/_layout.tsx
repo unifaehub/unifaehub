@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { SideMenuProvider } from '../src/context/SideMenuContext';
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <PaperProvider theme={theme}>
         <AuthProvider>
-          <RootLayoutInner />
+          <SideMenuProvider>
+            <RootLayoutInner />
+          </SideMenuProvider>
         </AuthProvider>
       </PaperProvider>
     </QueryClientProvider>

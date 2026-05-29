@@ -32,6 +32,15 @@ export class EvaluationController {
     return this.service.getMyRooms(user.id);
   }
 
+  @Get('rooms/:salaId/my-status')
+  @Roles(...JORNADA_READ_ROLES)
+  getMyEvalStatus(
+    @Param('salaId', ParseIntPipe) salaId: number,
+    @CurrentUser() user: UserEntity,
+  ) {
+    return this.service.getMyEvalStatus(salaId, user.id);
+  }
+
   @Get('questions')
   @Roles(...JORNADA_READ_ROLES)
   getQuestions() {
