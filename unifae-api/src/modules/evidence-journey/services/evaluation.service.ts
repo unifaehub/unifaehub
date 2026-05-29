@@ -42,18 +42,16 @@ export class EvaluationService {
   async getMyRooms(professorId: number) {
     const rooms = await this.rooms
       .createQueryBuilder('r')
-      .andWhere(
-        'r.id IN (SELECT rp.sala_id FROM room_professors rp WHERE rp.professor_id = :pid)',
-        { pid: professorId },
-      )
+      .where('r.id IN (SELECT rp.sala_id FROM room_professors rp WHERE rp.professor_id = :pid)', { pid: professorId })
+      .andWhere('r.fechada = false')
+      .andWhere('r.dataEvento = CURDATE()')
       .leftJoinAndSelect('r.works', 'rw')
       .leftJoinAndSelect('rw.trabalho', 'w')
       .leftJoinAndSelect('w.aluno', 'a')
       .leftJoinAndSelect('r.banca', 'banca')
       .leftJoinAndSelect('banca.professor', 'bancaProf')
       .leftJoinAndSelect('r.professorLider', 'lider')
-      .where('r.fechada = false')
-      .orderBy('r.dataEvento', 'ASC')
+      .orderBy('r.id', 'ASC')
       .addOrderBy('rw.ordem', 'ASC')
       .getMany();
 
