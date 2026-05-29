@@ -2,7 +2,7 @@
 import UiConnectionRetry from '@/components/ui/UiConnectionRetry.vue'
 import UiAsyncPanel from '@/components/ui/UiAsyncPanel.vue'
 import client from '@/api/client'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToastStore } from '@/stores/toast'
 import { useConfirmStore } from '@/stores/confirm'
@@ -45,11 +45,64 @@ type RoomRow = {
   fechada: boolean
 }
 
-const dataEvento = ref('')
-const running    = ref(false)
-const rooms      = ref<RoomRow[]>([])
-const loading    = ref(false)
-const failed     = ref(false)
+const dataEvento   = ref('')
+const running      = ref(false)
+const rooms        = ref<RoomRow[]>([])
+const loading      = ref(false)
+const failed       = ref(false)
+const roomFilter   = ref('')
+
+// Filtro de salas em tempo real
+const filteredRooms = computed(() => {
+  const q = roomFilter.value.trim().toLowerCase()
+  if (!q) return rooms.value
+  return rooms.value.filter((r) => {
+    const hallName  = (r.hall ? `Sala ${r.hall.nome}` : `Sala #${r.id}`).toLowerCase()
+    const andar     = (r.hall?.andar ?? '').toLowerCase()
+    const banca     = r.banca.map((rp) => rp.professor.name.toLowerCase()).join(' ')
+    const works     = (r.works ?? []).map((rw) => rw.trabalho?.titulo ?? '').join(' ').toLowerCase()
+    return hallName.includes(q) || andar.includes(q) || banca.includes(q) || works.includes(q)
+  })
+})
+
+// ── Swap professor ────────────────────────────────────────────────────────
+type AvailProf = { id: number; name: string; cursoBase: string | null }
+const swapModal = ref<{ salaId: number; oldProf: { id: number; name: string } } | null>(null)
+const availProfs = ref<AvailProf[]>([])
+const swapNewProfId = ref<number | ''>('')
+const swapping = ref(false)
+
+async function openSwap(salaId: number, prof: { id: number; name: string }) {
+  swapModal.value = { salaId, oldProf: prof }
+  swapNewProfId.value = ''
+  // Carregar professores disponíveis para a data
+  try {
+    const { data } = await client.get<AvailProf[]>(
+      `/evidence-journey/professors/availabilities?dataEvento=${dataEvento.value}`
+    )
+    availProfs.value = (data as any[]).map((a: any) => ({
+      id: a.professor?.id ?? a.professorId,
+      name: a.professor?.name ?? '—',
+      cursoBase: a.professor?.cursoBase ?? null,
+    })).filter((p: AvailProf) => p.id !== prof.id)
+  } catch { availProfs.value = [] }
+}
+
+async function confirmSwap() {
+  if (!swapModal.value || !swapNewProfId.value) return
+  swapping.value = true
+  try {
+    await client.patch(
+      `/evidence-journey/lottery/rooms/${swapModal.value.salaId}/swap-professor`,
+      { oldProfessorId: swapModal.value.oldProf.id, newProfessorId: Number(swapNewProfId.value) }
+    )
+    toast.success('Professor substituído em todas as salas do dia.')
+    swapModal.value = null
+    reloadRooms()
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message ?? 'Erro ao substituir professor.')
+  } finally { swapping.value = false }
+}
 
 async function reloadRooms() {
   if (!dataEvento.value) { rooms.value = []; return }
@@ -161,8 +214,15 @@ async function runLottery() {
       </template>
     </div>
 
-    <div v-if="rooms?.length" class="lottery-view__summary">
-      <span class="summary-badge">{{ rooms.length }} sala(s) para {{ dataEvento }}</span>
+    <!-- ── Barra de filtro + resumo ─────────────────────────────────────── -->
+    <div v-if="rooms?.length" class="filter-bar">
+      <span class="summary-badge">{{ rooms.length }} sala(s) · {{ filteredRooms.length }} exibida(s)</span>
+      <input
+        v-model="roomFilter"
+        type="text"
+        class="input-field filter-input"
+        placeholder="🔍 Filtrar por sala, professor ou trabalho…"
+      />
     </div>
 
     <UiConnectionRetry v-if="failed" @retry="reloadRooms" />
@@ -175,7 +235,7 @@ async function runLottery() {
       </div>
 
       <div v-else class="rooms-grid">
-        <div v-for="r in rooms ?? []" :key="r.id" class="room-card" :class="{ 'room-card--closed': r.fechada }">
+        <div v-for="r in filteredRooms" :key="r.id" class="room-card" :class="{ 'room-card--closed': r.fechada }">
           <div class="room-card__header">
             <div>
               <span class="room-card__id">
@@ -206,12 +266,41 @@ async function runLottery() {
               <li v-for="rp in r.banca" :key="rp.professor.id">
                 {{ rp.professor.name }}
                 <span v-if="rp.professor.id === r.professorLider?.id" class="leader-tag">(Líder)</span>
+                <button class="swap-btn" @click="openSwap(r.id, rp.professor)" title="Substituir professor">⇄</button>
               </li>
             </ul>
           </div>
         </div>
       </div>
     </UiAsyncPanel>
+
+    <!-- ── Modal substituição de professor ───────────────────────────────── -->
+    <div v-if="swapModal" class="modal-overlay" @click.self="swapModal = null">
+      <div class="modal">
+        <h3 class="modal__title">Substituir Professor</h3>
+        <p class="modal__desc">
+          Substituindo <strong>{{ swapModal.oldProf.name }}</strong> em todas as salas do dia <strong>{{ dataEvento }}</strong>.
+        </p>
+        <div class="form-group">
+          <label>Novo professor</label>
+          <select v-model="swapNewProfId" class="select-field">
+            <option value="">Selecione…</option>
+            <option v-for="p in availProfs" :key="p.id" :value="p.id">
+              {{ p.name }}{{ p.cursoBase ? ` (${p.cursoBase})` : '' }}
+            </option>
+          </select>
+        </div>
+        <p v-if="!availProfs.length" class="modal__warn">
+          ⚠️ Nenhum professor disponível para esta data. Cadastre disponibilidades em Professores.
+        </p>
+        <div class="modal__actions">
+          <button class="btn btn--primary" :disabled="swapping || !swapNewProfId" @click="confirmSwap">
+            {{ swapping ? 'Substituindo…' : 'Confirmar Substituição' }}
+          </button>
+          <button class="btn" @click="swapModal = null">Cancelar</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -247,8 +336,21 @@ async function runLottery() {
 .warn-icon { margin-left: .3rem; }
 .preview-hint { font-size: .82rem; color: #6b7280; margin: .75rem 0 0; padding: .5rem .75rem; background: #fffbeb; border-radius: 6px; border: 1px solid #fde68a; }
 
-.summary-badge { background: #e8f5e9; color: #166534; padding: .3rem .8rem; border-radius: 12px; font-size: .85rem; font-weight: 600; }
-.empty-state { text-align: center; padding: 3rem; color: #9ca3af; }
+.summary-badge { background: #e8f5e9; color: #166534; padding: .3rem .8rem; border-radius: 12px; font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.filter-bar    { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.filter-input  { flex: 1; min-width: 220px; }
+.swap-btn      { background: none; border: none; cursor: pointer; font-size: .9rem; color: #6b7280; margin-left: .3rem; padding: 0 .2rem; }
+.swap-btn:hover { color: #0d631b; }
+.select-field { padding: .45rem .75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: .9rem; width: 100%; }
+.form-group   { display: flex; flex-direction: column; gap: .3rem; font-size: .87rem; margin-bottom: .75rem; }
+.form-group label { font-weight: 600; font-size: .8rem; color: #374151; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal        { background: #fff; border-radius: 10px; padding: 1.5rem; width: 440px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+.modal__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 .5rem; }
+.modal__desc  { font-size: .85rem; color: #6b7280; margin: 0 0 1rem; }
+.modal__warn  { font-size: .82rem; color: #92400e; background: #fef3c7; padding: .5rem .75rem; border-radius: 6px; margin-bottom: .75rem; }
+.modal__actions { display: flex; gap: .5rem; margin-top: 1.25rem; }
+.empty-state  { text-align: center; padding: 3rem; color: #9ca3af; }
 .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
 .room-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.1rem; background: #fff; }
 .room-card--closed { opacity: .7; background: #f9fafb; }

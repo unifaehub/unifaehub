@@ -22,6 +22,10 @@ export class PresentationHallEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   andar: string | null;
 
+  /** Bloco do imóvel — ex.: "Bloco A", "Bloco B". */
+  @Column({ type: 'varchar', length: 50, nullable: true, default: null })
+  bloco: string | null;
+
   @Column({ type: 'int', nullable: true })
   capacidade: number | null;
 

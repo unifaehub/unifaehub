@@ -170,12 +170,13 @@ const DEFAULT_MAX: Record<string, number> = {
   'Mostra de Jogos': 10, 'Desenvolvimento Prático': 5, 'Artigo / TCC': 10, 'Iniciação Científica': 10,
 }
 
-type Hall = { id: number; nome: string; andar: string | null; capacidade: number | null; tipoSala: string | null; maxTrabalhos: number | null }
+type Hall = { id: number; nome: string; andar: string | null; bloco: string | null; capacidade: number | null; tipoSala: string | null; maxTrabalhos: number | null }
 const showHallForm      = ref(false)
 const hallFormId        = ref<number | null>(null)
 const hallFormSetorId   = ref<number | null>(null)
 const hallFormNome      = ref('')
 const hallFormAndar     = ref('')
+const hallFormBloco     = ref('')
 const hallFormCap       = ref<number | string>('')
 const hallFormTipo      = ref('')
 const hallFormMax       = ref<number | string>('')
@@ -189,15 +190,15 @@ function onHallTipoChange() {
 
 function openNewHall(setorId: number) {
   hallFormId.value = null; hallFormSetorId.value = setorId
-  hallFormNome.value = ''; hallFormAndar.value = ''; hallFormCap.value = ''
+  hallFormNome.value = ''; hallFormAndar.value = ''; hallFormBloco.value = ''; hallFormCap.value = ''
   hallFormTipo.value = ''; hallFormMax.value = ''
   showHallForm.value = true
 }
 
 function openEditHall(setorId: number, h: Hall) {
   hallFormId.value = h.id; hallFormSetorId.value = setorId
-  hallFormNome.value = h.nome; hallFormAndar.value = h.andar ?? ''; hallFormCap.value = h.capacidade ?? ''
-  hallFormTipo.value = h.tipoSala ?? ''; hallFormMax.value = h.maxTrabalhos ?? ''
+  hallFormNome.value = h.nome; hallFormAndar.value = h.andar ?? ''; hallFormBloco.value = h.bloco ?? ''
+  hallFormCap.value = h.capacidade ?? ''; hallFormTipo.value = h.tipoSala ?? ''; hallFormMax.value = h.maxTrabalhos ?? ''
   showHallForm.value = true
 }
 
@@ -207,6 +208,7 @@ async function saveHall() {
   const payload = {
     nome:         hallFormNome.value.trim(),
     andar:        hallFormAndar.value || null,
+    bloco:        hallFormBloco.value || null,
     capacidade:   hallFormCap.value !== '' ? Number(hallFormCap.value) : null,
     tipoSala:     hallFormTipo.value || null,
     maxTrabalhos: hallFormMax.value !== '' ? Number(hallFormMax.value) : null,
@@ -310,10 +312,11 @@ onMounted(() => { loadConfig(); loadSectors() })
           </div>
 
           <table class="data-table">
-            <thead><tr><th>Sala</th><th>Andar</th><th>Tipo p/ Sorteio</th><th>Máx Trabalhos</th><th></th></tr></thead>
+            <thead><tr><th>Sala</th><th>Bloco</th><th>Andar</th><th>Tipo p/ Sorteio</th><th>Máx Trabalhos</th><th></th></tr></thead>
             <tbody>
               <tr v-for="h in s.salas ?? []" :key="h.id">
                 <td>{{ h.nome }}</td>
+                <td>{{ h.bloco ?? '—' }}</td>
                 <td>{{ h.andar ?? '—' }}</td>
                 <td>
                   <span v-if="h.tipoSala" class="tipo-chip">{{ h.tipoSala }}</span>
@@ -367,9 +370,13 @@ onMounted(() => { loadConfig(); loadSectors() })
             <input v-model="hallFormNome" type="text" class="input-field" placeholder="Ex.: 1, Lab A, Auditório" />
           </div>
           <div class="form-group">
-            <label>Andar (opcional)</label>
-            <input v-model="hallFormAndar" type="text" class="input-field" placeholder="Ex.: 2º" />
+            <label>Bloco (opcional)</label>
+            <input v-model="hallFormBloco" type="text" class="input-field" placeholder="Ex.: Bloco A" />
           </div>
+        </div>
+        <div class="form-group">
+          <label>Andar (opcional)</label>
+          <input v-model="hallFormAndar" type="text" class="input-field" placeholder="Ex.: Térreo, 2º andar" />
         </div>
 
         <div class="form-group">

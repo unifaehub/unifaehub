@@ -25,11 +25,13 @@ const SERVICES = [
   },
   {
     title: 'UNIFAE — Web',
-    cmd:   'node scripts/wait-for-api.mjs && npm run dev --prefix unifae-management -- --host 0.0.0.0 --port 5173',
+    cmd:   'node scripts/wait-for-api.mjs web && npm run dev --prefix unifae-management -- --host 0.0.0.0 --port 5173',
   },
   {
     title: 'UNIFAE — Mobile',
-    cmd:   `npm run ${mobileScript} --prefix unifae-app-jorney-evidence`,
+    // Aguarda a API antes de iniciar o Metro para evitar erros de conexão iniciais.
+    // Se a API não subir em 5 min, o Metro inicia mesmo assim (non-fatal).
+    cmd:   `node scripts/wait-for-api.mjs mobile && npm run ${mobileScript} --prefix unifae-app-jorney-evidence`,
   },
   {
     title: 'UNIFAE — GitSync',

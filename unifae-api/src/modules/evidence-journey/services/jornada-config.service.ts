@@ -26,6 +26,7 @@ class CreateSectorDto {
 class CreateHallDto {
   nome: string;
   andar?: string | null;
+  bloco?: string | null;
   capacidade?: number | null;
   tipoSala?: string | null;
   maxTrabalhos?: number | null;
@@ -185,6 +186,7 @@ export class JornadaConfigService {
       setorId,
       nome:         dto.nome.trim(),
       andar:        dto.andar ?? null,
+      bloco:        dto.bloco ?? null,
       capacidade:   dto.capacidade ?? null,
       tipoSala:     (dto.tipoSala as any) ?? null,
       maxTrabalhos: dto.maxTrabalhos ?? null,
@@ -197,6 +199,7 @@ export class JornadaConfigService {
     if (!hall) throw new NotFoundException('Sala não encontrada.');
     if (dto.nome !== undefined)         hall.nome         = dto.nome.trim();
     if (dto.andar !== undefined)        hall.andar        = dto.andar ?? null;
+    if (dto.bloco !== undefined)        (hall as any).bloco        = dto.bloco ?? null;
     if (dto.capacidade !== undefined)   hall.capacidade   = dto.capacidade ?? null;
     if (dto.tipoSala !== undefined)     (hall as any).tipoSala     = dto.tipoSala ?? null;
     if (dto.maxTrabalhos !== undefined) (hall as any).maxTrabalhos = dto.maxTrabalhos ?? null;

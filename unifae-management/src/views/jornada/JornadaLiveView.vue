@@ -39,13 +39,26 @@ const todayFormatted = computed(() =>
   })
 )
 
+/** Auditório primeiro, depois por nome (numérico/alfa). */
+function sortRooms(list: RoomStatus[]): RoomStatus[] {
+  return [...list].sort((a, b) => {
+    const na = a.hall?.nome ?? `#${a.id}`
+    const nb = b.hall?.nome ?? `#${b.id}`
+    const isAudA = /audit[oó]rio/i.test(na)
+    const isAudB = /audit[oó]rio/i.test(nb)
+    if (isAudA && !isAudB) return -1
+    if (!isAudA && isAudB) return  1
+    return na.localeCompare(nb, 'pt-BR', { numeric: true })
+  })
+}
+
 async function load() {
   loading.value = true
   try {
     const { data } = await client.get(
       `/evidence-journey/public/rooms-status?dataEvento=${today}`,
     )
-    rooms.value = data
+    rooms.value = sortRooms(data)
     lastUpdated.value = new Date()
   } catch { /* silencioso */ }
   finally { loading.value = false }
