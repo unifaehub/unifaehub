@@ -303,6 +303,12 @@ const router = createRouter({
           meta: { searchPlaceholder: 'Ranking de trabalhos…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
         },
         {
+          path: 'jornada/estatisticas',
+          name: 'jornada-stats',
+          component: () => import('@/views/jornada/WorksStatsView.vue'),
+          meta: { searchPlaceholder: 'Estatísticas de trabalhos…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
+        {
           path: 'jornada/configuracoes',
           name: 'jornada-config',
           component: () => import('@/views/jornada/JornadaConfigView.vue'),

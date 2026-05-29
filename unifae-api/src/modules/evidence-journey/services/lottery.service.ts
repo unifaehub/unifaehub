@@ -234,8 +234,8 @@ export class LotteryService {
 
       if (availableHalls.length === 0) {
         errors.push(
-          `${works.length} trabalho(s) do tipo "${tipo}" sem sala física configurada. ` +
-          `Configure uma sala com tipo "${tipo}" ou deixe sem tipo (Geral).`,
+          `• "${tipo}": ${works.length} trabalho(s) sem sala física configurada. ` +
+          `Configure uma sala com tipo "${tipo}" em Configurações → Setores e Salas.`,
         );
         continue;
       }
@@ -243,7 +243,7 @@ export class LotteryService {
       // Calcular distribuição
       const freeHalls = availableHalls.filter((h) => !usedHallIds.has(h.id));
       if (freeHalls.length === 0) {
-        errors.push(`Todas as salas do tipo "${tipo}" já estão ocupadas neste sorteio.`);
+        errors.push(`• "${tipo}": ${shuffledWorks.length} trabalho(s) sem sala disponível.`);
         continue;
       }
 
@@ -253,9 +253,8 @@ export class LotteryService {
 
       if (totalCapacity < shuffledWorks.length) {
         errors.push(
-          `Tipo "${tipo}": ${shuffledWorks.length} trabalho(s) mas apenas capacidade para ` +
-          `${totalCapacity} (${freeHalls.length} sala(s) disponível(is)). ` +
-          `Adicione mais salas do tipo "${tipo}" ou aumente o máximo por sala.`,
+          `• "${tipo}": ${shuffledWorks.length} trabalho(s), capacidade das salas: ${totalCapacity} ` +
+          `(${freeHalls.length} sala(s)). Adicione mais salas ou aumente o máximo por sala.`,
         );
         continue;
       }
@@ -272,7 +271,9 @@ export class LotteryService {
     }
 
     if (errors.length > 0) {
-      throw new BadRequestException(errors.join('\n'));
+      throw new BadRequestException(
+        `Não foi possível executar o sorteio. Corrija os problemas abaixo:\n\n${errors.join('\n')}`,
+      );
     }
 
     return plan;

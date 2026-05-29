@@ -45,6 +45,8 @@ export class EvaluationService {
       .where('r.id IN (SELECT rp.sala_id FROM room_professors rp WHERE rp.professor_id = :pid)', { pid: professorId })
       .andWhere('r.fechada = false')
       .andWhere('r.dataEvento = CURDATE()')
+      .leftJoinAndSelect('r.hall', 'hall')
+      .leftJoinAndSelect('hall.setor', 'setor')
       .leftJoinAndSelect('r.works', 'rw')
       .leftJoinAndSelect('rw.trabalho', 'w')
       .leftJoinAndSelect('w.aluno', 'a')

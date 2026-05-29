@@ -34,6 +34,12 @@ type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: stri
 export class WorksController {
   constructor(private readonly service: WorksService) {}
 
+  @Get('stats')
+  @Roles(...JORNADA_ADMIN_ROLES)
+  stats() {
+    return this.service.getStats();
+  }
+
   @Get()
   @Roles(...JORNADA_ADMIN_ROLES)
   list(@Query() query: { page?: string; limit?: string; status?: string; q?: string }) {

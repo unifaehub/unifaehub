@@ -8,6 +8,7 @@ import { In, IsNull, Repository } from 'typeorm';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
 import { EvidenceWorkStatus } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
+import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.entity';
 import { parsePageLimit, toPaginated } from '../../../common/pagination';
 import { CreateWorkDto } from '../dto/create-work.dto';
 import { ModerateWorksDto } from '../dto/moderate-works.dto';
@@ -22,6 +23,8 @@ export class WorksService {
   constructor(
     @InjectRepository(EvidenceWorkEntity)
     private readonly works: Repository<EvidenceWorkEntity>,
+    @InjectRepository(RoomBestWorkEntity)
+    private readonly bestWorks: Repository<RoomBestWorkEntity>,
     private readonly config: ConfigService,
   ) {}
 
@@ -127,6 +130,44 @@ export class WorksService {
     work.status = EvidenceWorkStatus.INATIVO;
     work.deletedAt = new Date();
     await this.works.save(work);
+  }
+
+  async getStats() {
+    const all = await this.works.find({ where: { deletedAt: IsNull() } });
+
+    const total      = all.length;
+    const aprovados  = all.filter((w) => w.status === EvidenceWorkStatus.APROVADO).length;
+    const reprovados = all.filter((w) => w.status === EvidenceWorkStatus.REPROVADO).length;
+    const pendentes  = all.filter((w) => w.status === EvidenceWorkStatus.PENDENTE).length;
+    const inativos   = all.filter((w) => w.status === EvidenceWorkStatus.INATIVO).length;
+
+    // Agrupar por curso
+    const cursoMap = new Map<string, { total: number; aprovados: number; reprovados: number; pendentes: number }>();
+    for (const w of all) {
+      const c = w.cursoTrabalho ?? 'Não informado';
+      if (!cursoMap.has(c)) cursoMap.set(c, { total: 0, aprovados: 0, reprovados: 0, pendentes: 0 });
+      const entry = cursoMap.get(c)!;
+      entry.total++;
+      if (w.status === EvidenceWorkStatus.APROVADO)  entry.aprovados++;
+      if (w.status === EvidenceWorkStatus.REPROVADO) entry.reprovados++;
+      if (w.status === EvidenceWorkStatus.PENDENTE)  entry.pendentes++;
+    }
+    const porCurso = [...cursoMap.entries()]
+      .map(([curso, s]) => ({ curso, ...s }))
+      .sort((a, b) => b.total - a.total);
+
+    // Destaques pós-evento por curso
+    const bests = await this.bestWorks.find({ relations: ['trabalho'] });
+    const destaquesMap = new Map<string, number>();
+    for (const b of bests) {
+      const c = b.trabalho?.cursoTrabalho ?? 'Não informado';
+      destaquesMap.set(c, (destaquesMap.get(c) ?? 0) + 1);
+    }
+    const destaquesPorCurso = [...destaquesMap.entries()]
+      .map(([curso, destaques]) => ({ curso, destaques }))
+      .sort((a, b) => b.destaques - a.destaques);
+
+    return { total, aprovados, reprovados, pendentes, inativos, porCurso, destaquesPorCurso };
   }
 
   private saveFile(file: UploadedMulterFile, alunoId: number): string {

@@ -11,6 +11,7 @@ export type Room = {
   id: number;
   dataEvento: string;
   tipoSala: string | null;
+  hall: { id: number; nome: string; andar: string | null; setor: { nome: string } | null } | null;
   professorLider: { id: number; name: string } | null;
   banca: { professor: { id: number; name: string } }[];
   works: RoomWork[];

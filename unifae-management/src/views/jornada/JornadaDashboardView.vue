@@ -14,6 +14,7 @@ const sections = ref([
   { name: 'Palavra-Chave', desc: 'Agendar palavras-chave do evento',              route: 'jornada-keywords'   },
   { name: 'Ranking',       desc: 'Visualizar ranking final dos trabalhos',        route: 'jornada-ranking'    },
   { name: 'Configurações', desc: 'Datas, local, setores e salas do evento',       route: 'jornada-config'     },
+  { name: 'Estatísticas', desc: 'Trabalhos por curso, aprovações e destaques',   route: 'jornada-stats'      },
 ])
 
 type Config = { eventoNome: string | null; eventoLocal: string | null; datasEvento: string[] | null }
