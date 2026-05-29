@@ -90,7 +90,13 @@ async function fetchProfessors() {
 }
 
 watch(tipoSubmissao, (v) => { if (v === 'manual') fetchProfessors() })
-onMounted(() => { fetchPublicConfig() })
+onMounted(() => {
+  fetchPublicConfig()
+  // Cursos são usados tanto no filtro de professor quanto no campo Curso do trabalho
+  client.get<Course[]>('/evidence-journey/public/courses')
+    .then(({ data }) => { courses.value = data })
+    .catch(() => {})
+})
 
 // ── Orientador ───────────────────────────────────────────────────────
 const orientadorId    = ref<number | ''>('')   // '' = nenhum selecionado
@@ -463,7 +469,10 @@ async function submitWork() {
         <div class="form-grid">
           <div class="form-group">
             <label>Curso *</label>
-            <input v-model="cursoTrabalho" type="text" class="input-field" placeholder="Ex.: Engenharia de Software" :disabled="submitting" />
+            <select v-model="cursoTrabalho" class="input-field" :disabled="submitting">
+              <option value="">Selecionar curso…</option>
+              <option v-for="c in courses" :key="c.id" :value="c.name">{{ c.name }}</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Categoria</label>
