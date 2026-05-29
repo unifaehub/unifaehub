@@ -447,10 +447,9 @@ export class WorksService {
     return works.map((w) => ({ ...w, alunoNome: student.name }));
   }
 
-  /** Lista cursos ativos — usado pelo filtro de professor no formulário público. */
+  /** Lista todos os cursos — usado pelo filtro de professor no formulário público. */
   async listPublicCourses() {
     return this.courses.find({
-      where: { active: true },
       order: { name: 'ASC' },
       select: ['id', 'name'],
     });
