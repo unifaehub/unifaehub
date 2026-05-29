@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import client from '@/api/client'
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 
 type Integrante = { ra: string; nome: string | null; checking: boolean; notFound: boolean }
 type WorkStatus = {
