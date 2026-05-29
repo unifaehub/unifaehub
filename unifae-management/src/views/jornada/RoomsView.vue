@@ -18,6 +18,9 @@ type RoomStatus = {
   id: number
   dataEvento: string
   fechada: boolean
+  hall: { id: number; nome: string; andar: string | null } | null
+  tipoSala: string | null
+  works: { id: number; ordem: number; trabalho: { titulo: string; cursoTrabalho: string; aluno: { name: string } | null } }[]
   trabalho: { id: number; titulo: string; cursoTrabalho: string; aluno: { name: string } | null } | null
   professorLider: { id: number; name: string } | null
   banca: { professor: { id: number; name: string } }[]
@@ -92,7 +95,7 @@ function printReport() {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;border-bottom:2px solid #0d631b;padding-bottom:12px">
           <div>
             <div style="font-size:11px;font-weight:700;color:#0d631b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Jornada de Evidências e Mostra de Jogos</div>
-            <div style="font-size:20px;font-weight:900;color:#111">Sala #${r.id}</div>
+            <div style="font-size:20px;font-weight:900;color:#111">${r.hall ? `Sala ${r.hall.nome}` : `Sala #${r.id}`}</div>
             <div style="font-size:12px;color:#555;margin-top:4px">${eventDate}${(r as any).tipoSala && (r as any).tipoSala !== 'Geral' ? ' · ' + (r as any).tipoSala : ''}</div>
           </div>
           <span style="background:${statusBg};padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700">${statusTx}</span>
@@ -240,7 +243,10 @@ function formatTime(d: Date | null) {
           <!-- Cabeçalho da sala -->
           <div class="room-card__header" @click="expandedRoom = expandedRoom === r.id ? null : r.id">
             <div class="room-card__left">
-              <span class="room-card__id">Sala #{{ r.id }}</span>
+              <span class="room-card__id">
+                {{ (r as any).hall ? `Sala ${(r as any).hall.nome}` : `Sala #${r.id}` }}
+                <span v-if="(r as any).hall?.andar" class="room-card__andar"> · {{ (r as any).hall.andar }}</span>
+              </span>
               <span v-if="r.fechada" class="badge badge--closed">🔒 Fechada</span>
             </div>
             <span class="room-card__expand">{{ expandedRoom === r.id ? '▲' : '▼' }}</span>

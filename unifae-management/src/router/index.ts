@@ -56,6 +56,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/jornada/ao-vivo',
+      name: 'jornada-live',
+      component: () => import('@/views/jornada/JornadaLiveView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/MainLayout.vue'),
       meta: { requiresAuth: true },

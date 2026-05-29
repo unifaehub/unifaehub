@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useRef, useState } from 'react';
 import {
-  Animated, Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View,
+  Animated, Dimensions, Modal, Pressable, StyleSheet, Text,
+  TouchableOpacity, View, Linking,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useQuery } from '@tanstack/react-query';
 import { jornadaApi } from '../api/jornada';
 import { useAuth } from './AuthContext';
+
+const KEYWORD_URL = 'https://sis.fae.br:8080/eventos';
 
 const W = Dimensions.get('window').width;
 const MENU_W = Math.min(W * 0.78, 300);
@@ -26,6 +30,16 @@ export function SideMenuProvider({ children }: { children: React.ReactNode }) {
     queryFn: jornadaApi.getCurrentKeyword,
     enabled: visible,
   });
+
+  const [copied, setCopied] = useState(false);
+
+  async function handleKeywordPress() {
+    if (!keyword) return;
+    await Clipboard.setStringAsync(keyword.palavra);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    Linking.openURL(KEYWORD_URL).catch(() => {});
+  }
 
   function openMenu() {
     setVisible(true);
@@ -64,12 +78,21 @@ export function SideMenuProvider({ children }: { children: React.ReactNode }) {
           <View style={styles.keywordSection}>
             <Text style={styles.menuSectionLabel}>🔑 Palavra-Chave Atual</Text>
             {keyword ? (
-              <View style={styles.keywordBox}>
+              <TouchableOpacity
+                style={[styles.keywordBox, styles.keywordBoxClickable]}
+                onPress={handleKeywordPress}
+                activeOpacity={0.75}
+              >
                 <Text style={styles.keywordText}>{keyword.palavra}</Text>
                 <Text style={styles.keywordSub}>
                   {new Date(keyword.dataAgendamento + 'T00:00:00').toLocaleDateString('pt-BR')} às {keyword.horaInicio}
                 </Text>
-              </View>
+                <View style={styles.keywordAction}>
+                  <Text style={styles.keywordActionText}>
+                    {copied ? '✅ Copiado!' : '📋 Toque para copiar e abrir SIS'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             ) : (
               <Text style={styles.keywordEmpty}>Nenhuma palavra-chave ativa.</Text>
             )}
@@ -105,10 +128,13 @@ const styles = StyleSheet.create({
   divider:      { height: 1, backgroundColor: '#f3f4f6', marginVertical: 4 },
   keywordSection: { padding: 20 },
   menuSectionLabel: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 10 },
-  keywordBox:   { backgroundColor: '#f0fdf4', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 8 },
-  keywordText:  { fontSize: 22, fontWeight: '800', color: '#0d631b' },
-  keywordSub:   { fontSize: 11, color: '#6b7280', marginTop: 4 },
-  keywordEmpty: { fontSize: 13, color: '#9ca3af', marginBottom: 8 },
+  keywordBox:         { backgroundColor: '#f0fdf4', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 8 },
+  keywordBoxClickable:{ borderWidth: 1.5, borderColor: '#86efac' },
+  keywordText:        { fontSize: 22, fontWeight: '800', color: '#0d631b' },
+  keywordSub:         { fontSize: 11, color: '#6b7280', marginTop: 4 },
+  keywordAction:      { marginTop: 8, backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
+  keywordActionText:  { fontSize: 11, color: '#166534', fontWeight: '600' },
+  keywordEmpty:       { fontSize: 13, color: '#9ca3af', marginBottom: 8 },
   refreshBtn:   { alignSelf: 'flex-start', paddingVertical: 4 },
   refreshBtnText: { color: '#0d631b', fontSize: 13, fontWeight: '600' },
   logoutBtn:    { padding: 20 },

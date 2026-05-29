@@ -178,8 +178,10 @@ async function runLottery() {
         <div v-for="r in rooms ?? []" :key="r.id" class="room-card" :class="{ 'room-card--closed': r.fechada }">
           <div class="room-card__header">
             <div>
-              <span class="room-card__id">Sala #{{ r.id }}</span>
-              <span v-if="r.hall" class="room-card__hall">{{ r.hall.nome }}{{ r.hall.andar ? ` · ${r.hall.andar}` : '' }}</span>
+              <span class="room-card__id">
+                {{ r.hall ? `Sala ${r.hall.nome}` : `Sala #${r.id}` }}
+              </span>
+              <span v-if="r.hall?.andar" class="room-card__hall"> · {{ r.hall.andar }}</span>
             </div>
             <div class="room-card__badges">
               <span v-if="r.tipoSala && r.tipoSala !== 'Geral'" class="badge badge--tipo">{{ r.tipoSala }}</span>

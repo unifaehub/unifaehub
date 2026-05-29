@@ -31,6 +31,7 @@ import { RankingController } from './controllers/ranking.controller';
 import { QuestionsController } from './controllers/questions.controller';
 import { ProfessorAvailabilityController } from './controllers/professor-availability.controller';
 import { JornadaConfigController } from './controllers/jornada-config.controller';
+import { PublicRoomsController } from './controllers/public-rooms.controller';
 import { ReportProcessor } from './processors/report.processor';
 import { IdentityAccessModule } from '../identity-access/identity-access.module';
 import { AuditModule } from '../audit/audit.module';
@@ -67,6 +68,7 @@ import { AuditModule } from '../audit/audit.module';
     QuestionsController,
     ProfessorAvailabilityController,
     JornadaConfigController,
+    PublicRoomsController,
   ],
   providers: [
     WorksService,
