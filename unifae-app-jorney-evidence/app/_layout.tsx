@@ -5,6 +5,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { SideMenuProvider } from '../src/context/SideMenuContext';
+import { setUnauthorizedHandler } from '../src/api/client';
 
 const queryClient = new QueryClient();
 
@@ -15,9 +16,17 @@ const theme = {
 
 /** Guard de autenticação — roda DENTRO do Stack, depois do navigator estar pronto. */
 function AuthGuard() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Registrar handler de 401 → força re-login
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      signOut();
+      router.replace('/login');
+    });
+  }, []);
 
   useEffect(() => {
     console.log('[AuthGuard] user:', user?.name ?? null, '| isLoading:', isLoading, '| segments:', segments);

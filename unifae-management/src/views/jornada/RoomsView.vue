@@ -59,6 +59,69 @@ async function load() {
   finally { loading.value = false }
 }
 
+function printReport() {
+  // Abrir janela de impressão com HTML formatado para PDF
+  const win = window.open('', '_blank', 'width=900,height=700')
+  if (!win) return
+
+  const eventDate = new Date(dataEvento.value + 'T00:00:00').toLocaleDateString('pt-BR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  const rows = rooms.value.map((r, i) => `
+    <tr style="page-break-inside:avoid">
+      <td style="font-weight:700;vertical-align:top;padding:10px 8px;border:1px solid #ccc">#${r.id}</td>
+      <td style="padding:10px 8px;border:1px solid #ccc">
+        <div style="font-weight:700;margin-bottom:4px">${r.trabalho?.titulo ?? '—'}</div>
+        <div style="color:#555;font-size:12px">${r.trabalho?.cursoTrabalho ?? ''} · Aluno: ${r.trabalho?.aluno?.name ?? '—'}</div>
+      </td>
+      <td style="padding:10px 8px;border:1px solid #ccc;vertical-align:top">
+        ${(r.banca ?? []).map((rp) =>
+          `<div>${rp.professor.name}${r.professorLider?.id === rp.professor.id ? ' 👑' : ''}</div>`
+        ).join('')}
+      </td>
+      <td style="padding:10px 8px;border:1px solid #ccc;text-align:center;vertical-align:top">
+        <span style="background:${r.fechada ? '#e0e7ff' : '#dcfce7'};padding:3px 10px;border-radius:12px;font-size:12px">
+          ${r.fechada ? '🔒 Fechada' : '✅ Aberta'}
+        </span>
+      </td>
+    </tr>
+  `).join('')
+
+  win.document.write(`
+    <!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Relatório de Salas — ${eventDate}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 24px; font-size: 13px; }
+      h1 { font-size: 18px; margin-bottom: 4px; }
+      h2 { font-size: 14px; color: #555; font-weight: normal; margin-bottom: 20px; }
+      table { width: 100%; border-collapse: collapse; }
+      th { background: #0d631b; color: #fff; padding: 8px; text-align: left; font-size: 12px; }
+      tr:nth-child(even) td { background: #f9f9f9; }
+      @media print { @page { size: A4; margin: 1.5cm; } }
+    </style>
+    </head><body>
+    <h1>🎓 Jornada Científica e Mostra de Jogos</h1>
+    <h2>Relatório de Bancas — ${eventDate}</h2>
+    <table>
+      <thead><tr>
+        <th style="width:60px">Sala</th>
+        <th>Trabalho</th>
+        <th style="width:220px">Banca</th>
+        <th style="width:90px">Status</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:24px;font-size:11px;color:#888">
+      Gerado em ${new Date().toLocaleString('pt-BR')} · ${rooms.value.length} sala(s)
+    </div>
+    <script>window.onload = () => { window.print(); }<\/script>
+    </body></html>
+  `)
+  win.document.close()
+}
+
 function startTimer() {
   stopTimer()
   if (!dataEvento.value) return
@@ -112,6 +175,7 @@ function formatTime(d: Date | null) {
         <span class="live-text">Ao vivo · atualizado às {{ formatTime(lastUpdated) }}</span>
         <button class="btn-refresh" :disabled="loading" @click="load">↻</button>
       </div>
+      <button v-if="rooms.length" class="btn-pdf" @click="printReport">🖨️ Exportar PDF</button>
     </div>
 
     <div v-if="!dataEvento" class="empty-state">Selecione uma data para ver as salas.</div>
@@ -247,6 +311,8 @@ function formatTime(d: Date | null) {
 .btn-refresh { background: none; border: 1px solid #d1d5db; border-radius: 6px; padding: .2rem .55rem; cursor: pointer; font-size: .9rem; }
 .btn-refresh:hover { background: #f9fafb; }
 .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
+.btn-pdf { background: #0d631b; color: #fff; border: none; border-radius: 8px; padding: .4rem .9rem; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-pdf:hover { background: #065f17; }
 
 /* Summary */
 .summary-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }

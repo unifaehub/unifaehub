@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -40,5 +40,14 @@ export class LotteryController {
   @Roles(...JORNADA_ADMIN_ROLES)
   getRoomsWithStatus(@Query('dataEvento') dataEvento: string) {
     return this.service.getRoomsWithStatus(dataEvento);
+  }
+
+  @Patch('rooms/:id/swap-professor')
+  @Roles(...JORNADA_ADMIN_ROLES)
+  swapProfessor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { oldProfessorId: number; newProfessorId: number },
+  ) {
+    return this.service.swapProfessor(id, body.oldProfessorId, body.newProfessorId);
   }
 }

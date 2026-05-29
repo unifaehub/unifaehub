@@ -58,7 +58,19 @@ export enum AppointmentStatus {
   CANCELLED = 'CANCELLED',
 }
 
-// ─── Jornada de Evidências ───────────────────────────────────────────────────
+// ─── Jornada Científica e Mostra de Jogos ────────────────────────────────────
+
+export enum WorkCategory {
+  JORNADA_EVIDENCIAS = 'Jornada de Evidências',
+  MOSTRA_JOGOS       = 'Mostra de Jogos',
+}
+
+export enum WorkType {
+  PESQUISA                = 'Pesquisa',
+  TCC                     = 'TCC',
+  INICIACAO_CIENTIFICA    = 'Iniciação Científica',
+  DESENVOLVIMENTO_PRATICO = 'Desenvolvimento Prático',
+}
 
 export enum EvidenceWorkStatus {
   PENDENTE = 'Pendente',

@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { EvaluationEntity } from '../../../database/entities/evaluation.entity';
 import { PresentationRoomEntity } from '../../../database/entities/presentation-room.entity';
@@ -74,15 +74,18 @@ export class EvaluationService {
       throw new BadRequestException('Trabalho não pertence a esta sala.');
     }
 
-    // Verificar se já avaliou
-    const existing = await this.evaluations.findOne({
-      where: { trabalhoId, professorId, perguntaId: null as unknown as number },
+    // 1. Se já marcado Ausente/Indeferido — bloquear qualquer nova submissão
+    const statusRecord = await this.evaluations.findOne({
+      where: { trabalhoId, professorId, perguntaId: IsNull() },
     });
-    if (existing) throw new BadRequestException('Avaliação já enviada para este trabalho.');
+    if (statusRecord) {
+      throw new BadRequestException(
+        `Este trabalho já foi marcado como ${statusRecord.statusApresentacao} e não pode ser alterado.`,
+      );
+    }
 
-    // Ausente/Indeferido: salvar apenas status sem notas
+    // 2. Ausente/Indeferido: salvar apenas registro de status
     if (dto.statusApresentacao !== PresentationStatus.PRESENTE) {
-      // Usar plain object para evitar conflito de tipos com relações no .values()
       await this.evaluations
         .createQueryBuilder()
         .insert()
@@ -98,9 +101,20 @@ export class EvaluationService {
       return { saved: 1 };
     }
 
-    // Presente: salvar notas por pergunta
+    // 3. Presente: verificar duplicatas apenas das perguntas enviadas (permite Resumo + Apresentação separados)
     if (!dto.respostas?.length) {
       throw new BadRequestException('Respostas são obrigatórias para status Presente.');
+    }
+
+    const incomingIds = dto.respostas.map((r) => r.perguntaId);
+    const alreadyAnswered = await this.evaluations.find({
+      where: { trabalhoId, professorId, perguntaId: In(incomingIds) },
+    });
+    if (alreadyAnswered.length > 0) {
+      throw new BadRequestException(
+        'Você já enviou avaliação para este conjunto de perguntas. ' +
+        'Resumo e Apresentação podem ser enviados separadamente, mas não em duplicata.',
+      );
     }
 
     const rows = dto.respostas.map((r) => ({
@@ -108,7 +122,7 @@ export class EvaluationService {
       professorId,
       perguntaId: r.perguntaId,
       nota: r.nota ?? null,
-      comentario: r.comentario ?? null,
+      comentario: (dto as any).comentario ?? null,
       statusApresentacao: PresentationStatus.PRESENTE,
     }));
 
@@ -155,8 +169,9 @@ export class EvaluationService {
   async closeRoom(salaId: number, professorId: number, dto: CloseRoomDto) {
     const room = await this.rooms.findOne({
       where: { id: salaId, professorLiderId: professorId },
+      relations: ['banca'],
     });
-    if (!room) throw new NotFoundException('Sala não encontrada ou você não é o líder.');
+    if (!room) throw new NotFoundException('Sala não encontrada ou você não é o líder da sala.');
     if (room.fechada) throw new BadRequestException('Sala já foi fechada.');
 
     const professor = await this.users.findOne({ where: { id: professorId } });
@@ -164,6 +179,37 @@ export class EvaluationService {
 
     const passwordOk = await bcrypt.compare(dto.senha, professor.password);
     if (!passwordOk) throw new UnauthorizedException('Senha incorreta.');
+
+    // Verificar se todos os professores da banca enviaram Resumo e Apresentação
+    const activeQuestions = await this.questions.find({ where: { ativo: true } });
+    const bancaProfIds = (room.banca ?? []).map((rp) => rp.professorId);
+    const evals = await this.evaluations.find({
+      where: { trabalhoId: room.trabalhoId, professorId: In(bancaProfIds) },
+    });
+
+    const missing: string[] = [];
+    for (const pid of bancaProfIds) {
+      const profEvals = evals.filter((e) => e.professorId === pid);
+      const statusRec = profEvals.find((e) => e.perguntaId == null);
+      // Se Ausente/Indeferido → OK
+      if (statusRec && statusRec.statusApresentacao !== PresentationStatus.PRESENTE) continue;
+
+      const answeredIds = new Set(profEvals.filter((e) => e.perguntaId != null).map((e) => e.perguntaId));
+      const missingResumo = activeQuestions.filter((q) => q.tipo === 'Resumo' && !answeredIds.has(q.id));
+      const missingApres  = activeQuestions.filter((q) => q.tipo === 'Apresentação' && !answeredIds.has(q.id));
+
+      const prof = room.banca.find((b) => b.professorId === pid);
+      const profName = (prof as any)?.professor?.name ?? `Prof. #${pid}`;
+
+      if (missingResumo.length)  missing.push(`${profName}: faltam ${missingResumo.length} avaliação(ões) de Resumo`);
+      if (missingApres.length)   missing.push(`${profName}: faltam ${missingApres.length} avaliação(ões) de Apresentação`);
+    }
+
+    if (missing.length) {
+      throw new BadRequestException(
+        `Não é possível fechar a sala. Avaliações pendentes:\n${missing.join('\n')}`,
+      );
+    }
 
     if (dto.melhorTrabalhoId) {
       const existing = await this.bestWorks.findOne({ where: { salaId } });
@@ -174,7 +220,6 @@ export class EvaluationService {
       }
     }
 
-    room.fechada = true;
     await this.rooms
       .createQueryBuilder()
       .update(PresentationRoomEntity)
@@ -182,11 +227,12 @@ export class EvaluationService {
       .where('id = :id', { id: salaId })
       .execute();
 
-    await this.reportQueue.add('send-report', {
-      salaId,
-      professorId,
-      dataEvento: room.dataEvento,
-    });
+    // BullMQ: silencioso se Redis não disponível
+    try {
+      await this.reportQueue.add('send-report', { salaId, professorId, dataEvento: room.dataEvento });
+    } catch (e) {
+      console.warn('[closeRoom] Fila de relatório indisponível:', (e as Error).message);
+    }
 
     return { fechada: true };
   }

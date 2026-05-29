@@ -225,6 +225,50 @@ export class LotteryService {
     return arr;
   }
 
+  /**
+   * Troca um professor em TODAS as salas da data em que ele aparece na banca.
+   * O novo professor deve ter disponibilidade cadastrada para a data.
+   */
+  async swapProfessor(salaId: number, oldProfessorId: number, newProfessorId: number) {
+    const room = await this.rooms.findOne({ where: { id: salaId } });
+    if (!room) throw new Error('Sala não encontrada.');
+    const dataEvento = room.dataEvento;
+
+    // Verificar disponibilidade do novo professor na data
+    const avail = await this.availabilities.findOne({
+      where: { professorId: newProfessorId, dataEvento },
+    });
+    if (!avail) {
+      // Adicionar disponibilidade automaticamente se não existir
+      await this.availabilities.save(
+        this.availabilities.create({ professorId: newProfessorId, dataEvento }),
+      );
+    }
+
+    // Substituir em TODAS as salas da data
+    const roomsOnDate = await this.rooms.find({ where: { dataEvento } });
+    let updated = 0;
+    for (const r of roomsOnDate) {
+      const bancaEntry = await this.roomProfessors.findOne({
+        where: { salaId: r.id, professorId: oldProfessorId },
+      });
+      if (!bancaEntry) continue;
+
+      await this.roomProfessors.delete({ salaId: r.id, professorId: oldProfessorId });
+      await this.roomProfessors.save(
+        this.roomProfessors.create({ salaId: r.id, professorId: newProfessorId }),
+      );
+
+      // Atualizar líder se necessário
+      if (r.professorLiderId === oldProfessorId) {
+        await this.rooms.update(r.id, { professorLiderId: newProfessorId });
+      }
+      updated++;
+    }
+
+    return { swappedInRooms: updated, dataEvento };
+  }
+
   private rotateArray<T>(arr: T[], offset: number): T[] {
     const n = arr.length;
     if (n === 0) return arr;

@@ -2,6 +2,10 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
+// Callback registrado pelo _layout para forçar re-login em caso de 401
+let _onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: () => void) { _onUnauthorized = fn; }
+
 /**
  * Detecta a URL base da API automaticamente:
  * - Em DEV: usa o IP do Metro Bundler (mesmo IP da máquina de desenvolvimento)
@@ -54,11 +58,20 @@ apiClient.interceptors.response.use(
     console.log(`[API ←] ${response.status} ${response.config.url}`, response.data);
     return response;
   },
-  (error) => {
+  async (error) => {
     const status = error?.response?.status;
     const url    = error?.config?.url;
     const msg    = error?.response?.data?.message ?? error?.message;
     console.error(`[API ✗] ${status ?? 'ERR'} ${url}:`, msg, error?.response?.data);
+
+    // 401 → sessão expirada → forçar re-login
+    if (status === 401 && _onUnauthorized) {
+      console.warn('[API] 401 Unauthorized — forçando re-login');
+      await clearToken();
+      await SecureStore.deleteItemAsync('unifae_user');
+      _onUnauthorized();
+    }
+
     return Promise.reject(error);
   },
 );

@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { EvidenceWorkStatus } from './enums';
+import { EvidenceWorkStatus, WorkCategory, WorkType } from './enums';
 import { UserEntity } from './user.entity';
 
 @Entity('evidence_works')
@@ -23,6 +23,23 @@ export class EvidenceWorkEntity {
 
   @Column({ name: 'curso_trabalho', type: 'varchar', length: 200 })
   cursoTrabalho: string;
+
+  /** Categoria: Jornada de Evidências ou Mostra de Jogos. */
+  @Column({
+    type: 'enum',
+    enum: WorkCategory,
+    default: WorkCategory.JORNADA_EVIDENCIAS,
+  })
+  categoria: WorkCategory;
+
+  /** Tipo do trabalho — apenas para Jornada de Evidências. */
+  @Column({
+    name: 'tipo_trabalho',
+    type: 'enum',
+    enum: WorkType,
+    nullable: true,
+  })
+  tipoTrabalho: WorkType | null;
 
   @Column({ name: 'arquivo_url', type: 'varchar', length: 1024, nullable: true })
   arquivoUrl: string | null;
