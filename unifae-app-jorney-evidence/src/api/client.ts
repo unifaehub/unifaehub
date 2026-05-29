@@ -62,7 +62,12 @@ apiClient.interceptors.response.use(
     const status = error?.response?.status;
     const url    = error?.config?.url;
     const msg    = error?.response?.data?.message ?? error?.message;
-    console.error(`[API ✗] ${status ?? 'ERR'} ${url}:`, msg, error?.response?.data);
+    // 4xx são erros esperados (validação, negócio) — não exibir como erro vermelho
+    if (!status || status >= 500) {
+      console.error(`[API ✗] ${status ?? 'ERR'} ${url}:`, msg);
+    } else {
+      console.warn(`[API ✗] ${status} ${url}:`, msg);
+    }
 
     // 401 → sessão expirada → forçar re-login
     if (status === 401 && _onUnauthorized) {

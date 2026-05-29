@@ -24,7 +24,11 @@ export default function FechamentoScreen() {
         { text: 'OK', onPress: () => router.replace('/') },
       ]);
     } catch (err: any) {
-      Alert.alert('Erro', err?.response?.data?.message ?? 'Não foi possível fechar a sala.');
+      const status = err?.response?.status;
+      let msg = 'Não foi possível fechar a sala. Tente novamente.';
+      if (status === 400) msg = 'Há professores da banca que não finalizaram as avaliações para esta sala.';
+      else if (status === 401) msg = 'Senha incorreta. Verifique e tente novamente.';
+      Alert.alert('Atenção', msg);
     } finally {
       setSubmitting(false);
     }

@@ -34,7 +34,8 @@ export default function AvaliacaoTipoScreen() {
   const [comment, setComment]   = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastAnim    = useRef(new Animated.Value(0)).current;
+  const submittingRef = useRef(false); // guard síncrono contra duplo envio
 
   useEffect(() => {
     if (!successMsg) return;
@@ -45,32 +46,33 @@ export default function AvaliacaoTipoScreen() {
     ]).start(() => router.back());
   }, [successMsg]);
 
-  const total   = filteredQs.length;
-  const current = filteredQs[currentIdx];
-  const isLast  = currentIdx === total - 1;
+  const total      = filteredQs.length;
+  const current    = filteredQs[currentIdx];
+  const isLast     = currentIdx === total - 1;
   const selectedNota = current ? answers[current.id] : undefined;
-  const progress = total > 0 ? (currentIdx + 1) / total : 0;
-
-  // Nota pode avançar se pergunta atual tem nota
-  const canNext = selectedNota != null;
+  const progress   = total > 0 ? (currentIdx + 1) / total : 0;
+  // Bloqueia interação durante envio ou após sucesso (evita duplo clique)
+  const isBlocked  = submitting || !!successMsg;
+  const canNext    = selectedNota != null && !isBlocked;
 
   function selectNota(nota: number) {
-    if (!current) return;
+    if (!current || isBlocked) return;
     setAnswers((prev) => ({ ...prev, [current.id]: nota }));
   }
 
   function goNext() {
     if (!isLast) { setCurrentIdx((i) => i + 1); return; }
-    // Último: submeter
     handleSubmit();
   }
 
   async function handleSubmit() {
+    if (submittingRef.current) return; // guard síncrono contra duplo clique
     const allAnswered = filteredQs.every((q) => answers[q.id] != null);
     if (!allAnswered) {
       Alert.alert('Atenção', 'Avalie todas as perguntas antes de enviar.');
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await jornadaApi.submitEvaluation(salaNum, trabalhoNum, {
@@ -80,9 +82,10 @@ export default function AvaliacaoTipoScreen() {
       });
       qc.invalidateQueries({ queryKey: ['eval-status', salaNum] });
       setSuccessMsg(`Avaliação de ${tipoLabel} enviada!`);
+      // Mantém submitting=true após sucesso para bloquear o botão até router.back()
     } catch (e: any) {
       Alert.alert('Erro', e?.response?.data?.message ?? 'Não foi possível enviar.');
-    } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -143,7 +146,9 @@ export default function AvaliacaoTipoScreen() {
                 selectedNota === n && s.notaBtnSelected,
                 n <= 4  && selectedNota === n && s.notaBtnLow,
                 n >= 7  && selectedNota === n && s.notaBtnHigh,
+                isBlocked && s.notaBtnBlocked,
               ]}
+              disabled={isBlocked}
               onPress={() => selectNota(n)}
             >
               <Text style={[s.notaBtnText, selectedNota === n && s.notaBtnTextSelected]}>{n}</Text>
@@ -225,6 +230,7 @@ const s = StyleSheet.create({
   notaLabel:    { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 12 },
   notaGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24, justifyContent: 'center' },
   notaBtn:      { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  notaBtnBlocked: { opacity: 0.4 },
   notaBtnSelected: { borderColor: '#0d631b', backgroundColor: '#0d631b' },
   notaBtnLow:   { borderColor: '#dc2626', backgroundColor: '#dc2626' },
   notaBtnHigh:  { borderColor: '#16a34a', backgroundColor: '#16a34a' },
