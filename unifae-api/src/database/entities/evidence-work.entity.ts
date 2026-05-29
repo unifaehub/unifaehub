@@ -59,7 +59,37 @@ export class EvidenceWorkEntity {
 
   /** Integrantes adicionais do grupo (além do aluno principal). */
   @Column({ type: 'json', nullable: true })
-  integrantes: { ra: string; nome: string }[] | null;
+  integrantes: { ra: string; nome: string; email?: string }[] | null;
+
+  /** Como o resumo foi gerado: 'manual' (formulário) ou 'arquivo' (upload direto). */
+  @Column({ name: 'tipo_submissao', type: 'varchar', length: 10, nullable: true })
+  tipoSubmissao: 'manual' | 'arquivo' | null;
+
+  /** Orientador do trabalho (nome completo com titulação + email). */
+  @Column({ name: 'orientador', type: 'json', nullable: true })
+  orientador: { nome: string; email: string } | null;
+
+  @Column({ name: 'resumo_introducao', type: 'text', nullable: true })
+  resumoIntroducao: string | null;
+
+  @Column({ name: 'resumo_objetivos', type: 'text', nullable: true })
+  resumoObjetivos: string | null;
+
+  @Column({ name: 'resumo_metodo', type: 'text', nullable: true })
+  resumoMetodo: string | null;
+
+  @Column({ name: 'resumo_resultados', type: 'text', nullable: true })
+  resumoResultados: string | null;
+
+  @Column({ name: 'resumo_conclusoes', type: 'text', nullable: true })
+  resumoConclusoes: string | null;
+
+  @Column({ name: 'palavras_chave', type: 'varchar', length: 500, nullable: true })
+  palavrasChave: string | null;
+
+  /** Referências separadas por \n. */
+  @Column({ name: 'referencias', type: 'text', nullable: true })
+  referencias: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

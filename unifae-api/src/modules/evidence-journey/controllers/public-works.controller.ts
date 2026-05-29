@@ -27,10 +27,25 @@ export class PublicWorksController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: MAX_FILE_BYTES } }))
   submit(
-    @Body() body: { ras: string | string[]; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
+    @Body() body: {
+      ras: string | string[];
+      titulo: string;
+      cursoTrabalho: string;
+      categoria: string;
+      tipoTrabalho?: string;
+      tipoSubmissao?: 'manual' | 'arquivo';
+      orientadorNome?: string;
+      orientadorEmail?: string;
+      resumoIntroducao?: string;
+      resumoObjetivos?: string;
+      resumoMetodo?: string;
+      resumoResultados?: string;
+      resumoConclusoes?: string;
+      palavrasChave?: string;
+      referencias?: string;
+    },
     @UploadedFile() file?: UploadedMulterFile,
   ) {
-    // FormData envia arrays como campo repetido ou como string separada por vírgula
     const ras = Array.isArray(body.ras)
       ? body.ras
       : String(body.ras ?? '').split(',').map((r) => r.trim()).filter(Boolean);

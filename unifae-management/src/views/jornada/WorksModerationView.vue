@@ -30,6 +30,7 @@ type WorkRow = {
   dataSubmissao: string
   aluno: { id: number; name: string; email: string } | null
   arquivoUrl: string | null
+  tipoSubmissao: 'manual' | 'arquivo' | null
 }
 
 const toast = useToastStore()
@@ -152,8 +153,9 @@ const STATUS_COLORS: Record<string, string> = {
               <th>Curso</th>
               <th>Aluno</th>
               <th>Status</th>
+              <th>Tipo</th>
               <th>Submissão</th>
-              <th>PDF</th>
+              <th>Arquivo</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -166,9 +168,14 @@ const STATUS_COLORS: Record<string, string> = {
               <td>
                 <span class="status-badge" :style="{ background: STATUS_COLORS[w.status] + '20', color: STATUS_COLORS[w.status] }">{{ w.status }}</span>
               </td>
+              <td>
+                <span v-if="w.tipoSubmissao === 'manual'"  class="tipo-badge tipo-badge--manual">Formulário</span>
+                <span v-else-if="w.tipoSubmissao === 'arquivo'" class="tipo-badge tipo-badge--arquivo">Arquivo</span>
+                <span v-else class="text-muted">—</span>
+              </td>
               <td>{{ new Date(w.dataSubmissao).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</td>
               <td>
-                <a v-if="w.arquivoUrl" :href="w.arquivoUrl" target="_blank" class="link-pdf">PDF</a>
+                <a v-if="w.arquivoUrl" :href="w.arquivoUrl" target="_blank" class="link-pdf">Abrir</a>
                 <span v-else class="text-muted">—</span>
               </td>
               <td>
@@ -211,6 +218,9 @@ const STATUS_COLORS: Record<string, string> = {
 .btn--danger { background: #dc2626; color: #fff; }
 .btn-icon-sm { background: none; border: none; cursor: pointer; font-size: 1rem; padding: .1rem .3rem; }
 .text-muted { color: #9ca3af; }
+.tipo-badge { padding: .15rem .55rem; border-radius: 12px; font-size: .78rem; font-weight: 600; }
+.tipo-badge--manual  { background: #eff6ff; color: #1d4ed8; }
+.tipo-badge--arquivo { background: #faf5ff; color: #7c3aed; }
 
 .public-link-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: .75rem 1rem;

@@ -35,6 +35,7 @@ import { PublicRoomsController } from './controllers/public-rooms.controller';
 import { PublicWorksController } from './controllers/public-works.controller';
 import { StudentImportController } from './controllers/student-import.controller';
 import { StudentImportService } from './services/student-import.service';
+import { EvidenceWorkDocxService } from './services/evidence-work-docx.service';
 import { ReportProcessor } from './processors/report.processor';
 import { IdentityAccessModule } from '../identity-access/identity-access.module';
 import { AuditModule } from '../audit/audit.module';
@@ -86,6 +87,7 @@ import { AuditModule } from '../audit/audit.module';
     JornadaConfigService,
     ReportProcessor,
     StudentImportService,
+    EvidenceWorkDocxService,
   ],
 })
 export class EvidenceJourneyModule {}

@@ -15,6 +15,7 @@ import { ModerateWorksDto } from '../dto/moderate-works.dto';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
+import { EvidenceWorkDocxService } from './evidence-work-docx.service';
 
 type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: string; size: number };
 
@@ -28,6 +29,7 @@ export class WorksService {
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
     private readonly config: ConfigService,
+    private readonly docxGen: EvidenceWorkDocxService,
   ) {}
 
   async list(params: {
@@ -175,25 +177,53 @@ export class WorksService {
   /**
    * Submissão pública sem login.
    * `ras` é um array de RAs dos integrantes do grupo — o primeiro é o responsável principal.
+   * `tipoSubmissao` determina o modo: 'manual' (gera docx) ou 'arquivo' (upload direto).
    */
   async publicSubmit(
-    dto: { ras: string[]; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
+    dto: {
+      ras: string[];
+      titulo: string;
+      cursoTrabalho: string;
+      categoria: string;
+      tipoTrabalho?: string;
+      tipoSubmissao?: 'manual' | 'arquivo';
+      orientadorNome?: string;
+      orientadorEmail?: string;
+      resumoIntroducao?: string;
+      resumoObjetivos?: string;
+      resumoMetodo?: string;
+      resumoResultados?: string;
+      resumoConclusoes?: string;
+      palavrasChave?: string;
+      referencias?: string;
+    },
     file?: UploadedMulterFile,
   ) {
     if (!dto.ras?.length) throw new BadRequestException('Informe ao menos um RA.');
+
+    const tipoSubmissao = dto.tipoSubmissao ?? 'arquivo';
+
+    if (tipoSubmissao === 'manual') {
+      if (!dto.resumoIntroducao?.trim()) throw new BadRequestException('Introdução é obrigatória.');
+      if (!dto.resumoObjetivos?.trim())  throw new BadRequestException('Objetivos são obrigatórios.');
+      if (!dto.resumoMetodo?.trim())     throw new BadRequestException('Método é obrigatório.');
+      if (!dto.resumoResultados?.trim()) throw new BadRequestException('Resultados são obrigatórios.');
+      if (!dto.resumoConclusoes?.trim()) throw new BadRequestException('Conclusões são obrigatórias.');
+      if (!dto.palavrasChave?.trim())    throw new BadRequestException('Palavras-chave são obrigatórias.');
+    }
 
     const primaryRa = dto.ras[0]!.trim();
     const primary = await this.users.findOne({ where: { ra: primaryRa, deletedAt: IsNull() } });
     if (!primary) throw new NotFoundException(`Aluno não encontrado para o RA ${primaryRa}.`);
 
     // Resolve integrantes adicionais
-    const extras: { ra: string; nome: string }[] = [];
+    const extras: { ra: string; nome: string; email?: string }[] = [];
     for (const ra of dto.ras.slice(1)) {
       const trimmed = ra.trim();
       if (!trimmed) continue;
       const u = await this.users.findOne({ where: { ra: trimmed, deletedAt: IsNull() } });
       if (!u) throw new NotFoundException(`Aluno não encontrado para o RA ${trimmed}.`);
-      extras.push({ ra: trimmed, nome: u.name });
+      extras.push({ ra: trimmed, nome: u.name, email: u.email ?? undefined });
     }
 
     const existing = await this.works.findOne({
@@ -211,17 +241,68 @@ export class WorksService {
       );
     }
 
-    const arquivoUrl = file ? this.saveFile(file, primary.id) : null;
+    let arquivoUrl: string | null = null;
+    if (tipoSubmissao === 'arquivo' && file) {
+      arquivoUrl = this.saveFile(file, primary.id);
+    } else if (tipoSubmissao === 'manual') {
+      const orientador =
+        dto.orientadorNome?.trim()
+          ? { nome: dto.orientadorNome.trim(), email: dto.orientadorEmail?.trim() ?? '' }
+          : null;
+
+      const autores = [
+        { nome: primary.name, email: primary.email ?? undefined },
+        ...extras,
+      ];
+
+      const referencias = (dto.referencias ?? '')
+        .split('\n')
+        .map((r) => r.trim())
+        .filter(Boolean);
+
+      const buffer = await this.docxGen.generate({
+        titulo:        dto.titulo,
+        autores,
+        orientador,
+        cursoTrabalho: dto.cursoTrabalho,
+        resumo: {
+          introducao: dto.resumoIntroducao!,
+          objetivos:  dto.resumoObjetivos!,
+          metodo:     dto.resumoMetodo!,
+          resultados: dto.resumoResultados!,
+          conclusoes: dto.resumoConclusoes!,
+        },
+        palavrasChave: dto.palavrasChave!,
+        referencias,
+      });
+
+      arquivoUrl = this.saveBuffer(buffer, primary.id, 'resumo.docx');
+    }
+
+    const orientadorSaved =
+      dto.orientadorNome?.trim()
+        ? { nome: dto.orientadorNome.trim(), email: dto.orientadorEmail?.trim() ?? '' }
+        : null;
+
     const work = this.works.create({
-      titulo:        dto.titulo,
-      cursoTrabalho: dto.cursoTrabalho,
-      categoria:     (dto.categoria as WorkCategory) ?? WorkCategory.JORNADA_EVIDENCIAS,
-      tipoTrabalho:  (dto.tipoTrabalho as WorkType) ?? null,
+      titulo:            dto.titulo,
+      cursoTrabalho:     dto.cursoTrabalho,
+      categoria:         (dto.categoria as WorkCategory) ?? WorkCategory.JORNADA_EVIDENCIAS,
+      tipoTrabalho:      (dto.tipoTrabalho as WorkType) ?? null,
       arquivoUrl,
-      status:        EvidenceWorkStatus.PENDENTE,
-      dataSubmissao: new Date(),
-      alunoId:       primary.id,
-      integrantes:   extras.length ? extras : null,
+      status:            EvidenceWorkStatus.PENDENTE,
+      dataSubmissao:     new Date(),
+      alunoId:           primary.id,
+      integrantes:       extras.length ? extras : null,
+      tipoSubmissao,
+      orientador:        orientadorSaved,
+      resumoIntroducao:  dto.resumoIntroducao?.trim() ?? null,
+      resumoObjetivos:   dto.resumoObjetivos?.trim()  ?? null,
+      resumoMetodo:      dto.resumoMetodo?.trim()     ?? null,
+      resumoResultados:  dto.resumoResultados?.trim() ?? null,
+      resumoConclusoes:  dto.resumoConclusoes?.trim() ?? null,
+      palavrasChave:     dto.palavrasChave?.trim()    ?? null,
+      referencias:       dto.referencias?.trim()      ?? null,
     });
     const saved = await this.works.save(work);
     return { ...saved, alunoNome: primary.name };
@@ -237,6 +318,17 @@ export class WorksService {
     });
     if (!work) return null;
     return { ...work, alunoNome: student.name };
+  }
+
+  private saveBuffer(buffer: Buffer, alunoId: number, filename: string): string {
+    const uploadRoot =
+      this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
+    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId));
+    fs.mkdirSync(dir, { recursive: true });
+    const fname = `${Date.now()}-${filename}`;
+    const filePath = path.join(dir, fname);
+    fs.writeFileSync(filePath, buffer);
+    return filePath;
   }
 
   private saveFile(file: UploadedMulterFile, alunoId: number): string {
