@@ -126,7 +126,7 @@ export class WorksService {
   }
 
   async moderate(dto: ModerateWorksDto): Promise<{ updated: number }> {
-    const updates: Partial<EvidenceWorkEntity> = { status: dto.status };
+    const updates: { status: EvidenceWorkStatus; motivo?: string | null } = { status: dto.status };
     const motivo = dto.motivo?.trim() ?? null;
     if (dto.status === EvidenceWorkStatus.REPROVADO && motivo) {
       updates.motivo = motivo;
