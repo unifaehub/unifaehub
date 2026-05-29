@@ -338,6 +338,43 @@ const router = createRouter({
           component: () => import('@/views/jornada/JornadaConfigView.vue'),
           meta: { searchPlaceholder: 'Configurações da Jornada…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
         },
+        // ── Intercurso ────────────────────────────────────────────────
+        {
+          path: 'intercurso',
+          name: 'intercurso-dashboard',
+          component: () => import('@/views/intercurso/IntercursoDashboardView.vue'),
+          meta: { searchPlaceholder: 'Intercurso…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
+        {
+          path: 'intercurso/modalidades',
+          name: 'intercurso-modalidades',
+          component: () => import('@/views/intercurso/ModalidadesView.vue'),
+          meta: { searchPlaceholder: 'Buscar modalidades…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
+        {
+          path: 'intercurso/equipes',
+          name: 'intercurso-equipes',
+          component: () => import('@/views/intercurso/EquipesView.vue'),
+          meta: { searchPlaceholder: 'Buscar equipes…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
+        {
+          path: 'intercurso/resultados',
+          name: 'intercurso-resultados',
+          component: () => import('@/views/intercurso/ResultadosView.vue'),
+          meta: { searchPlaceholder: 'Resultados do Intercurso…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
+        {
+          path: 'intercurso/palavra-chave',
+          name: 'intercurso-keywords',
+          component: () => import('@/views/intercurso/IntercursoKeywordView.vue'),
+          meta: { searchPlaceholder: 'Palavras-chave do Intercurso…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
+        {
+          path: 'intercurso/configuracoes',
+          name: 'intercurso-config',
+          component: () => import('@/views/intercurso/IntercursoConfigView.vue'),
+          meta: { searchPlaceholder: 'Configurações do Intercurso…', roles: ['ADMIN', 'COORDINATOR'] satisfies Role[] },
+        },
       ],
     },
   ],

@@ -4,6 +4,7 @@ import { BullModule } from '@nestjs/bull';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
 import { EvidenceJourneyModule } from './modules/evidence-journey/evidence-journey.module';
+import { IntercursoModule } from './modules/intercurso/intercurso.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AuditModule } from './modules/audit/audit.module';
@@ -62,6 +63,7 @@ import { PatientAppointmentsModule } from './modules/patient-appointments/patien
     CareLocationsModule,
     PatientAppointmentsModule,
     EvidenceJourneyModule,
+    IntercursoModule,
   ],
 })
 export class AppModule {}

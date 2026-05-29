@@ -3,7 +3,7 @@ export type NavSection = 'main' | 'footer'
 
 export type NavRole = 'MASTER' | 'ADMIN' | 'ADMIN_JORNADA' | 'COORDINATOR' | 'PROFESSOR' | 'STUDENT' | 'PATIENT'
 
-export type NavGroup = 'hub' | 'jornada' | 'config'
+export type NavGroup = 'hub' | 'jornada' | 'intercurso' | 'config'
 
 export interface NavItem {
   routeName: string
@@ -26,6 +26,7 @@ export const NAV_TOP: NavItem[] = [
   { routeName: 'categories', label: 'Categorias', icon: 'category', section: 'main', group: 'hub', roles: ['MASTER', 'ADMIN', 'COORDINATOR'] },
   { routeName: 'reports', label: 'Relatórios', icon: 'assessment', section: 'main', group: 'hub', roles: ['MASTER', 'ADMIN', 'COORDINATOR', 'PROFESSOR', 'STUDENT'] },
   { routeName: 'jornada-dashboard', label: 'Jornada de Evidências', icon: 'science', section: 'main', group: 'jornada', roles: ['MASTER', 'ADMIN', 'ADMIN_JORNADA', 'COORDINATOR'] },
+  { routeName: 'intercurso-dashboard', label: 'Intercurso', icon: 'emoji_events', section: 'main', group: 'intercurso', roles: ['MASTER', 'ADMIN', 'COORDINATOR'] },
 ]
 
 export const NAV_FOOTER: NavItem[] = [
@@ -36,6 +37,7 @@ export const NAV_FOOTER: NavItem[] = [
 export const NAV_GROUP_LABELS: Record<NavGroup, string> = {
   hub: 'UNIFAE Hub',
   jornada: 'Jornada Científica',
+  intercurso: 'Intercurso',
   config: 'Configurações',
 }
 

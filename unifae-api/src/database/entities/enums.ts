@@ -97,3 +97,12 @@ export enum PresentationStatus {
   AUSENTE = 'Ausente',
   INDEFERIDO = 'Indeferido',
 }
+
+// ─── Intercurso ──────────────────────────────────────────────────────────────
+
+export enum IntercursoEquipeStatus {
+  PENDENTE   = 'Pendente',
+  APROVADA   = 'Aprovada',
+  REPROVADA  = 'Reprovada',
+  INATIVA    = 'Inativa',
+}
