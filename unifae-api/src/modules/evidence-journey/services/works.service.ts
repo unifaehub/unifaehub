@@ -16,6 +16,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigService } from '@nestjs/config';
 import { EvidenceWorkDocxService } from './evidence-work-docx.service';
+import { JornadaConfigService } from './jornada-config.service';
 
 type UploadedMulterFile = { buffer: Buffer; mimetype: string; originalname: string; size: number };
 
@@ -30,6 +31,7 @@ export class WorksService {
     private readonly users: Repository<UserEntity>,
     private readonly config: ConfigService,
     private readonly docxGen: EvidenceWorkDocxService,
+    private readonly configService: JornadaConfigService,
   ) {}
 
   async list(params: {
@@ -122,9 +124,15 @@ export class WorksService {
   }
 
   async moderate(dto: ModerateWorksDto): Promise<{ updated: number }> {
+    const updates: Partial<EvidenceWorkEntity> = { status: dto.status };
+    if (dto.status === EvidenceWorkStatus.REPROVADO && dto.motivo?.trim()) {
+      updates.motivo = dto.motivo.trim();
+    } else if (dto.status === EvidenceWorkStatus.APROVADO) {
+      updates.motivo = null;
+    }
     const result = await this.works.update(
       { id: In(dto.ids), deletedAt: IsNull() },
-      { status: dto.status },
+      updates,
     );
     return { updated: result.affected ?? 0 };
   }
@@ -196,6 +204,8 @@ export class WorksService {
       resumoMetodo?: string;
       resumoResultados?: string;
       resumoConclusoes?: string;
+      /** JSON string: { secao: string; conteudo: string }[] */
+      resumoSecoes?: string;
       palavrasChave?: string;
       referencias?: string;
     },
@@ -205,13 +215,41 @@ export class WorksService {
 
     const tipoSubmissao = dto.tipoSubmissao ?? 'arquivo';
 
+    // Validate submission period
+    const pubConfig = await this.configService.getPublicConfig();
+    if (!pubConfig.submissaoAberta) {
+      throw new BadRequestException('O período de submissão de trabalhos não está aberto.');
+    }
+
+    // Parse dynamic sections
+    let parsedSecoes: { secao: string; conteudo: string }[] = [];
+    try { parsedSecoes = dto.resumoSecoes ? JSON.parse(dto.resumoSecoes) : []; } catch { /* ignore */ }
+
+    // If no resumoSecoes provided, build from old fixed fields for backward compat
+    if (!parsedSecoes.length && tipoSubmissao === 'manual') {
+      const cfgSecoes = pubConfig.secoesResumo;
+      const oldFieldMap: Record<string, string | undefined> = {
+        'Introdução': dto.resumoIntroducao,
+        'Objetivos':  dto.resumoObjetivos,
+        'Método':     dto.resumoMetodo,
+        'Resultados': dto.resumoResultados,
+        'Conclusões': dto.resumoConclusoes,
+      };
+      parsedSecoes = cfgSecoes
+        .map((s) => ({ secao: s.titulo, conteudo: oldFieldMap[s.titulo]?.trim() ?? '' }))
+        .filter((s) => s.conteudo);
+    }
+
     if (tipoSubmissao === 'manual') {
-      if (!dto.resumoIntroducao?.trim()) throw new BadRequestException('Introdução é obrigatória.');
-      if (!dto.resumoObjetivos?.trim())  throw new BadRequestException('Objetivos são obrigatórios.');
-      if (!dto.resumoMetodo?.trim())     throw new BadRequestException('Método é obrigatório.');
-      if (!dto.resumoResultados?.trim()) throw new BadRequestException('Resultados são obrigatórios.');
-      if (!dto.resumoConclusoes?.trim()) throw new BadRequestException('Conclusões são obrigatórias.');
-      if (!dto.palavrasChave?.trim())    throw new BadRequestException('Palavras-chave são obrigatórias.');
+      if (!dto.palavrasChave?.trim()) throw new BadRequestException('Palavras-chave são obrigatórias.');
+      // Validate required sections
+      const cfgSecoes = pubConfig.secoesResumo;
+      for (const s of cfgSecoes.filter((s) => s.obrigatorio)) {
+        const found = parsedSecoes.find((p) => p.secao === s.titulo);
+        if (!found?.conteudo?.trim()) {
+          throw new BadRequestException(`Seção "${s.titulo}" é obrigatória.`);
+        }
+      }
     }
 
     const primaryRa = dto.ras[0]!.trim();
@@ -273,13 +311,7 @@ export class WorksService {
         orientador:     orientadorParsed,
         coorientadores: coorientadoresParsed,
         cursoTrabalho:  dto.cursoTrabalho,
-        resumo: {
-          introducao: dto.resumoIntroducao!,
-          objetivos:  dto.resumoObjetivos!,
-          metodo:     dto.resumoMetodo!,
-          resultados: dto.resumoResultados!,
-          conclusoes: dto.resumoConclusoes!,
-        },
+        secoes:         parsedSecoes,
         palavrasChave: dto.palavrasChave!,
         referencias,
       });
@@ -305,6 +337,7 @@ export class WorksService {
       resumoMetodo:      dto.resumoMetodo?.trim()     ?? null,
       resumoResultados:  dto.resumoResultados?.trim() ?? null,
       resumoConclusoes:  dto.resumoConclusoes?.trim() ?? null,
+      resumoSecoes:      parsedSecoes.length ? parsedSecoes : null,
       palavrasChave:     dto.palavrasChave?.trim()    ?? null,
       referencias:       dto.referencias?.trim()      ?? null,
     });
@@ -312,12 +345,23 @@ export class WorksService {
     return { ...saved, alunoNome: primary.name };
   }
 
+  /** Histórico de todos os envios do aluno pelo RA. */
+  async publicFindHistoryByRa(ra: string) {
+    const student = await this.users.findOne({ where: { ra } });
+    if (!student) return [];
+    const works = await this.works.find({
+      where: { alunoId: student.id, deletedAt: IsNull() },
+      order: { dataSubmissao: 'DESC' },
+    });
+    return works.map((w) => ({ ...w, alunoNome: student.name }));
+  }
+
   /** Lista professores cadastrados — usado pelo formulário público de submissão. */
   async listPublicProfessors() {
     return this.users.find({
       where: { role: UserRole.PROFESSOR, deletedAt: IsNull() },
       order: { name: 'ASC' },
-      select: ['id', 'name', 'email'],
+      select: ['id', 'name', 'email', 'cursoBase'],
     });
   }
 

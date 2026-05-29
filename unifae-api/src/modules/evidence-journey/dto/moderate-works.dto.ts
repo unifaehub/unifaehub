@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsInt, ArrayMinSize } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsEnum, IsInt, ArrayMinSize, IsOptional, IsString, MaxLength } from 'class-validator';
 import { EvidenceWorkStatus } from '../../../database/entities/enums';
 
 export class ModerateWorksDto {
@@ -12,4 +12,10 @@ export class ModerateWorksDto {
   @ApiProperty({ enum: [EvidenceWorkStatus.APROVADO, EvidenceWorkStatus.REPROVADO] })
   @IsEnum([EvidenceWorkStatus.APROVADO, EvidenceWorkStatus.REPROVADO])
   status: EvidenceWorkStatus.APROVADO | EvidenceWorkStatus.REPROVADO;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  motivo?: string;
 }

@@ -34,7 +34,12 @@ export class JornadaConfigController {
 
   @Patch()
   @Roles(...JORNADA_WRITE_ROLES)
-  updateConfig(@Body() body: { eventoNome?: string; eventoLocal?: string; datasEvento?: string[] }) {
+  updateConfig(@Body() body: {
+    eventoNome?: string; eventoLocal?: string; datasEvento?: string[];
+    submissaoInicio?: string | null; submissaoFim?: string | null;
+    avaliacaoInicio?: string | null; avaliacaoFim?: string | null;
+    secoesResumo?: { id: string; titulo: string; ordem: number; obrigatorio: boolean }[] | null;
+  }) {
     return this.service.updateConfig(body);
   }
 

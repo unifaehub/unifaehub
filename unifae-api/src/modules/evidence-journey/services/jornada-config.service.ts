@@ -12,10 +12,23 @@ import { WorkGroupEntity } from '../../../database/entities/work-group.entity';
 import { ProfessorAvailabilityEntity } from '../../../database/entities/professor-availability.entity';
 import { RoomWorkEntity } from '../../../database/entities/room-work.entity';
 
+export const DEFAULT_SECOES = [
+  { id: 'introducao', titulo: 'Introdução', ordem: 1, obrigatorio: true },
+  { id: 'objetivos',  titulo: 'Objetivos',  ordem: 2, obrigatorio: true },
+  { id: 'metodo',     titulo: 'Método',     ordem: 3, obrigatorio: true },
+  { id: 'resultados', titulo: 'Resultados', ordem: 4, obrigatorio: true },
+  { id: 'conclusoes', titulo: 'Conclusões', ordem: 5, obrigatorio: true },
+];
+
 class UpsertConfigDto {
   eventoNome?: string | null;
   eventoLocal?: string | null;
   datasEvento?: string[] | null;
+  submissaoInicio?: string | null;
+  submissaoFim?: string | null;
+  avaliacaoInicio?: string | null;
+  avaliacaoFim?: string | null;
+  secoesResumo?: { id: string; titulo: string; ordem: number; obrigatorio: boolean }[] | null;
 }
 
 class CreateSectorDto {
@@ -142,7 +155,26 @@ export class JornadaConfigService {
     if (dto.eventoNome !== undefined) cfg.eventoNome = dto.eventoNome ?? null;
     if (dto.eventoLocal !== undefined) cfg.eventoLocal = dto.eventoLocal ?? null;
     if (dto.datasEvento !== undefined) cfg.datasEvento = dto.datasEvento ?? null;
+    if (dto.submissaoInicio !== undefined) cfg.submissaoInicio = dto.submissaoInicio ?? null;
+    if (dto.submissaoFim !== undefined) cfg.submissaoFim = dto.submissaoFim ?? null;
+    if (dto.avaliacaoInicio !== undefined) cfg.avaliacaoInicio = dto.avaliacaoInicio ?? null;
+    if (dto.avaliacaoFim !== undefined) cfg.avaliacaoFim = dto.avaliacaoFim ?? null;
+    if (dto.secoesResumo !== undefined) cfg.secoesResumo = dto.secoesResumo ?? null;
     return this.configs.save(cfg);
+  }
+
+  async getPublicConfig() {
+    const cfg = await this.getConfig();
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      submissaoInicio: cfg.submissaoInicio,
+      submissaoFim: cfg.submissaoFim,
+      submissaoAberta: (
+        (!cfg.submissaoInicio || cfg.submissaoInicio <= today) &&
+        (!cfg.submissaoFim    || cfg.submissaoFim    >= today)
+      ),
+      secoesResumo: cfg.secoesResumo ?? DEFAULT_SECOES,
+    };
   }
 
   // ── Sectors ───────────────────────────────────────────────────────────────

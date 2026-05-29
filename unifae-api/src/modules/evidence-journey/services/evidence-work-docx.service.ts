@@ -8,13 +8,8 @@ export interface WorkDocxData {
   orientador: { nome: string; email: string } | null;
   coorientadores: { nome: string; email: string }[];
   cursoTrabalho: string;
-  resumo: {
-    introducao: string;
-    objetivos: string;
-    metodo: string;
-    resultados: string;
-    conclusoes: string;
-  };
+  /** Seções dinâmicas em ordem */
+  secoes: { secao: string; conteudo: string }[];
   palavrasChave: string;
   /** Uma referência por item. */
   referencias: string[];
@@ -89,19 +84,11 @@ export class EvidenceWorkDocxService {
     // ── Resumo ─────────────────────────────────────────────────────────
     children.push(new Paragraph({ children: [boldRun('Resumo:')] }));
 
-    const sections: { label: string; text: string }[] = [
-      { label: 'Introdução: ', text: data.resumo.introducao },
-      { label: 'Objetivos: ', text: data.resumo.objetivos },
-      { label: 'Método: ', text: data.resumo.metodo },
-      { label: 'Resultados: ', text: data.resumo.resultados },
-      { label: 'Conclusões: ', text: data.resumo.conclusoes },
-    ];
-
-    for (const s of sections) {
+    for (const s of data.secoes) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.BOTH,
-          children: [boldRun(s.label), normalRun(s.text)],
+          children: [boldRun(`${s.secao}: `), normalRun(s.conteudo)],
         }),
       );
     }

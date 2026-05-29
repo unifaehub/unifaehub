@@ -95,6 +95,14 @@ export class EvidenceWorkEntity {
   @Column({ name: 'referencias', type: 'text', nullable: true })
   referencias: string | null;
 
+  /** Motivo de reprovação informado pela coordenação. */
+  @Column({ type: 'text', nullable: true })
+  motivo: string | null;
+
+  /** Seções dinâmicas do resumo (substitui os campos fixos para novos envios). */
+  @Column({ name: 'resumo_secoes', type: 'json', nullable: true })
+  resumoSecoes: { secao: string; conteudo: string }[] | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

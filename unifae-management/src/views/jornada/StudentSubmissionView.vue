@@ -10,11 +10,14 @@ type WorkStatus = {
   alunoNome: string
   integrantes: { ra: string; nome: string }[] | null
   tipoSubmissao: 'manual' | 'arquivo' | null
+  motivo?: string | null
 }
-type Professor = { id: number; name: string; email: string }
+type Professor = { id: number; name: string; email: string; cursoBase?: string | null }
 type Coorientador =
   | { tipo: 'interno'; professorId: number; nome: string; email: string }
   | { tipo: 'externo'; professorId?: never; nome: string; email: string }
+type SecaoConfig = { id: string; titulo: string; ordem: number; obrigatorio: boolean }
+type HistoryWork = { id: number; titulo: string; status: string; dataSubmissao: string; motivo?: string | null; tipoSubmissao?: string }
 
 // ── Integrantes ──────────────────────────────────────────────────────
 const integrantes = ref<Integrante[]>([{ ra: '', nome: null, checking: false, notFound: false }])
@@ -31,9 +34,35 @@ const tipoSubmissao = ref<'manual' | 'arquivo'>('arquivo')
 // ── Modo arquivo ─────────────────────────────────────────────────────
 const arquivo = ref<File | null>(null)
 
+// ── Config pública ───────────────────────────────────────────────────
+const secoesConfig    = ref<SecaoConfig[]>([])
+const secoesFilled    = ref<Record<string, string>>({})
+const submissaoAberta = ref(true)
+
+async function fetchPublicConfig() {
+  try {
+    const { data } = await client.get('/evidence-journey/public/config')
+    secoesConfig.value = data.secoesResumo ?? []
+    submissaoAberta.value = data.submissaoAberta ?? true
+    // Init secoesFilled with empty strings for all sections
+    const filled: Record<string, string> = {}
+    for (const s of secoesConfig.value) filled[s.id] = ''
+    secoesFilled.value = filled
+  } catch { /* silencioso */ }
+}
+
 // ── Professores ──────────────────────────────────────────────────────
-const professors     = ref<Professor[]>([])
-const professorsLoad = ref(false)
+const professors       = ref<Professor[]>([])
+const professorsLoad   = ref(false)
+const professorSearch  = ref('')
+const professorsFiltered = computed(() => {
+  const q = professorSearch.value.toLowerCase().trim()
+  if (!q) return professors.value
+  return professors.value.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    (p.cursoBase && p.cursoBase.toLowerCase().includes(q))
+  )
+})
 
 async function fetchProfessors() {
   if (professors.value.length) return
@@ -46,7 +75,7 @@ async function fetchProfessors() {
 }
 
 watch(tipoSubmissao, (v) => { if (v === 'manual') fetchProfessors() })
-onMounted(() => { /* pré-carrega se já em modo manual */ })
+onMounted(() => { fetchPublicConfig() })
 
 // ── Orientador ───────────────────────────────────────────────────────
 const orientadorId    = ref<number | ''>('')   // '' = nenhum selecionado
@@ -128,6 +157,14 @@ const hasWork    = ref(false)
 const submitting = ref(false)
 const errorMsg   = ref('')
 const successMsg = ref('')
+const history    = ref<HistoryWork[]>([])
+
+async function fetchHistory(ra: string) {
+  try {
+    const { data } = await client.get(`/evidence-journey/public/works/history/${encodeURIComponent(ra)}`)
+    history.value = data
+  } catch { /* silencioso */ }
+}
 
 const CATEGORIAS = ['Jornada de Evidências', 'Mostra de Jogos']
 const TIPOS      = ['Pesquisa', 'TCC', 'Iniciação Científica', 'Desenvolvimento Prático']
@@ -162,6 +199,7 @@ function onRaInput(idx: number) {
   const item = integrantes.value[idx]!
   if (raTimers[idx]) clearTimeout(raTimers[idx]!)
   item.nome = null; item.notFound = false
+  if (idx === 0) { history.value = [] }
   myWork.value = null; hasWork.value = false; errorMsg.value = ''
   const ra = item.ra.trim()
   if (ra.length < 3) return
@@ -175,7 +213,11 @@ async function lookupRa(idx: number, ra: string) {
     const { data } = await client.get(`/evidence-journey/public/works/${encodeURIComponent(ra)}`)
     item.nome     = data?.alunoNome ?? null
     item.notFound = !data?.alunoNome
-    if (idx === 0) { myWork.value = data ?? null; hasWork.value = !!data }
+    if (idx === 0) {
+      myWork.value = data ?? null
+      hasWork.value = !!data
+      if (data?.alunoNome) fetchHistory(ra)
+    }
   } catch {
     item.nome = null; item.notFound = true
   } finally { item.checking = false }
@@ -228,13 +270,13 @@ async function submitWork() {
     }
   }
   if (tipoSubmissao.value === 'manual') {
-    if (!orientadorPayload())              { errorMsg.value = 'Selecione ou informe o orientador.'; return }
-    if (!resumoIntroducao.value.trim())    { errorMsg.value = 'Preencha a Introdução.'; return }
-    if (!resumoObjetivos.value.trim())     { errorMsg.value = 'Preencha os Objetivos.'; return }
-    if (!resumoMetodo.value.trim())        { errorMsg.value = 'Preencha o Método.'; return }
-    if (!resumoResultados.value.trim())    { errorMsg.value = 'Preencha os Resultados.'; return }
-    if (!resumoConclusoes.value.trim())    { errorMsg.value = 'Preencha as Conclusões.'; return }
-    if (!palavrasChave.value.trim())       { errorMsg.value = 'Preencha as Palavras-chave.'; return }
+    if (!orientadorPayload()) { errorMsg.value = 'Selecione ou informe o orientador.'; return }
+    if (!palavrasChave.value.trim()) { errorMsg.value = 'Preencha as Palavras-chave.'; return }
+    for (const s of secoesConfig.value.filter(s => s.obrigatorio)) {
+      if (!secoesFilled.value[s.id]?.trim()) {
+        errorMsg.value = `Preencha a seção "${s.titulo}".`; return
+      }
+    }
   }
 
   submitting.value = true
@@ -254,13 +296,13 @@ async function submitWork() {
       if (orient) form.append('orientador', JSON.stringify(orient))
       const coOrients = coorientadoresPayload()
       if (coOrients.length) form.append('coorientadores', JSON.stringify(coOrients))
-      form.append('resumoIntroducao', resumoIntroducao.value.trim())
-      form.append('resumoObjetivos',  resumoObjetivos.value.trim())
-      form.append('resumoMetodo',     resumoMetodo.value.trim())
-      form.append('resumoResultados', resumoResultados.value.trim())
-      form.append('resumoConclusoes', resumoConclusoes.value.trim())
-      form.append('palavrasChave',    palavrasChave.value.trim())
-      form.append('referencias',      referencias.value.trim())
+      // Build dynamic sections
+      const secoesPayload = secoesConfig.value
+        .filter(s => secoesFilled.value[s.id]?.trim())
+        .map(s => ({ secao: s.titulo, conteudo: secoesFilled.value[s.id]!.trim() }))
+      form.append('resumoSecoes', JSON.stringify(secoesPayload))
+      form.append('palavrasChave', palavrasChave.value.trim())
+      form.append('referencias',   referencias.value.trim())
     }
 
     const { data } = await client.post<WorkStatus>('/evidence-journey/public/works', form, {
@@ -271,8 +313,15 @@ async function submitWork() {
     titulo.value = ''; cursoTrabalho.value = ''; tipoTrabalho.value = ''; arquivo.value = null
     orientadorId.value = ''; orientadorNome.value = ''; orientadorEmail.value = ''
     coorientadores.value = []
+    palavrasChave.value = ''; referencias.value = ''
     resumoIntroducao.value = ''; resumoObjetivos.value = ''; resumoMetodo.value = ''
-    resumoResultados.value = ''; resumoConclusoes.value = ''; palavrasChave.value = ''; referencias.value = ''
+    resumoResultados.value = ''; resumoConclusoes.value = ''
+    const cleared: Record<string, string> = {}
+    for (const s of secoesConfig.value) cleared[s.id] = ''
+    secoesFilled.value = cleared
+    // Refresh history
+    const primaryRa = integrantes.value[0]?.ra.trim()
+    if (primaryRa) fetchHistory(primaryRa)
     successMsg.value = 'Trabalho submetido com sucesso! Aguarde a análise da coordenação.'
   } catch (e: any) {
     errorMsg.value = e?.response?.data?.message ?? 'Erro ao submeter trabalho.'
@@ -285,6 +334,11 @@ async function submitWork() {
     <div class="sub-header">
       <h1 class="sub-title">Jornada de Evidências e Mostra de Jogos</h1>
       <p class="sub-subtitle">Submissão de trabalhos</p>
+    </div>
+
+    <!-- ── Aviso período submissão ──────────────────────────────────── -->
+    <div v-if="!submissaoAberta" class="alert alert--warn">
+      O período de submissão de trabalhos não está aberto no momento.
     </div>
 
     <!-- ── Integrantes ─────────────────────────────────────────────── -->
@@ -334,9 +388,32 @@ async function submitWork() {
         </div>
         <span class="ws-badge" :style="{ color: statusColor(myWork.status), background: statusBg(myWork.status) }">{{ myWork.status }}</span>
       </div>
+      <p v-if="myWork.motivo && myWork.status === 'Reprovado'" class="motivo-text">
+        <strong>Motivo da reprovação:</strong> {{ myWork.motivo }}
+      </p>
       <p v-if="myWork.status === 'Reprovado'" class="resubmit-hint">
         Seu trabalho foi reprovado. Corrija e reenvie abaixo.
       </p>
+    </section>
+
+    <!-- ── Histórico de envios ───────────────────────────────────────── -->
+    <section v-if="history.length > 1" class="card mb">
+      <h3 class="card__title">Histórico de envios</h3>
+      <div class="history-list">
+        <div v-for="h in history" :key="h.id" class="history-row">
+          <div class="history-info">
+            <p class="history-titulo">{{ h.titulo }}</p>
+            <p class="history-meta">
+              {{ new Date(h.dataSubmissao).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
+              <span v-if="h.tipoSubmissao" class="badge-tipo" :class="h.tipoSubmissao === 'manual' ? 'badge-tipo--manual' : 'badge-tipo--arquivo'">
+                {{ h.tipoSubmissao === 'manual' ? 'Formulário' : 'Arquivo' }}
+              </span>
+            </p>
+            <p v-if="h.motivo && h.status === 'Reprovado'" class="history-motivo">Motivo: {{ h.motivo }}</p>
+          </div>
+          <span class="ws-badge" :style="{ color: statusColor(h.status), background: statusBg(h.status) }">{{ h.status }}</span>
+        </div>
+      </div>
     </section>
 
     <!-- ── Mensagens ──────────────────────────────────────────────── -->
@@ -410,13 +487,18 @@ async function submitWork() {
           <div class="form-group">
             <label>Selecione o orientador</label>
             <div v-if="professorsLoad" class="hint hint--loading">Carregando professores…</div>
-            <select v-else class="input-field" :disabled="submitting"
-              :value="orientadorId"
-              @change="onOrientadorSelect(+($event.target as HTMLSelectElement).value || '')"
-            >
-              <option value="">— Selecionar professor —</option>
-              <option v-for="p in professors" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
+            <template v-else>
+              <input v-model="professorSearch" type="text" class="input-field" placeholder="Filtrar por nome ou curso…" style="margin-bottom:.35rem" :disabled="submitting" />
+              <select class="input-field" :disabled="submitting"
+                :value="orientadorId"
+                @change="onOrientadorSelect(+($event.target as HTMLSelectElement).value || '')"
+              >
+                <option value="">— Selecionar professor —</option>
+                <option v-for="p in professorsFiltered" :key="p.id" :value="p.id">
+                  {{ p.name }}{{ p.cursoBase ? ` (${p.cursoBase})` : '' }}
+                </option>
+              </select>
+            </template>
             <p v-if="orientadorId !== ''" class="hint hint--ok">
               ✅ {{ professors.find(p => p.id === orientadorId)?.email }}
             </p>
@@ -452,7 +534,9 @@ async function submitWork() {
                 @change="onCoorientadorProfSelect(idx, +($event.target as HTMLSelectElement).value || '')"
               >
                 <option value="">— Selecionar professor —</option>
-                <option v-for="p in professors" :key="p.id" :value="p.id">{{ p.name }}</option>
+                <option v-for="p in professorsFiltered" :key="p.id" :value="p.id">
+                  {{ p.name }}{{ p.cursoBase ? ` (${p.cursoBase})` : '' }}
+                </option>
               </select>
               <p v-if="co.professorId !== ''" class="hint hint--ok">
                 ✅ {{ professors.find(p => p.id === co.professorId)?.email }}
@@ -476,33 +560,43 @@ async function submitWork() {
 
           <p v-if="!coorientadores.length" class="co-empty">Nenhum co-orientador adicionado.</p>
 
-          <!-- Seções do resumo -->
+          <!-- Seções do resumo dinâmicas -->
           <div class="manual-divider">Seções do resumo</div>
-          <div class="form-group">
-            <label>Introdução *</label>
-            <textarea v-model="resumoIntroducao" class="input-field textarea" rows="4"
-              placeholder="Contextualize o problema, justifique a pesquisa e apresente as lacunas existentes na literatura." :disabled="submitting" />
-          </div>
-          <div class="form-group">
-            <label>Objetivos *</label>
-            <textarea v-model="resumoObjetivos" class="input-field textarea" rows="3"
-              placeholder="Descreva o objetivo geral e os objetivos específicos do trabalho." :disabled="submitting" />
-          </div>
-          <div class="form-group">
-            <label>Método *</label>
-            <textarea v-model="resumoMetodo" class="input-field textarea" rows="3"
-              placeholder="Descreva a metodologia utilizada: tipo de pesquisa, coleta e análise de dados." :disabled="submitting" />
-          </div>
-          <div class="form-group">
-            <label>Resultados *</label>
-            <textarea v-model="resumoResultados" class="input-field textarea" rows="4"
-              placeholder="Apresente os principais resultados e descobertas do trabalho." :disabled="submitting" />
-          </div>
-          <div class="form-group">
-            <label>Conclusões *</label>
-            <textarea v-model="resumoConclusoes" class="input-field textarea" rows="3"
-              placeholder="Resuma as conclusões e as implicações práticas ou teóricas do trabalho." :disabled="submitting" />
-          </div>
+          <template v-if="secoesConfig.length">
+            <div v-for="s in secoesConfig" :key="s.id" class="form-group">
+              <label>{{ s.titulo }} <span v-if="s.obrigatorio">*</span></label>
+              <textarea v-model="secoesFilled[s.id]" class="input-field textarea" rows="4"
+                :placeholder="`Preencha: ${s.titulo}`" :disabled="submitting" />
+            </div>
+          </template>
+          <template v-else>
+            <!-- Fallback: campos fixos para compatibilidade -->
+            <div class="form-group">
+              <label>Introdução *</label>
+              <textarea v-model="resumoIntroducao" class="input-field textarea" rows="4"
+                placeholder="Contextualize o problema, justifique a pesquisa e apresente as lacunas existentes na literatura." :disabled="submitting" />
+            </div>
+            <div class="form-group">
+              <label>Objetivos *</label>
+              <textarea v-model="resumoObjetivos" class="input-field textarea" rows="3"
+                placeholder="Descreva o objetivo geral e os objetivos específicos do trabalho." :disabled="submitting" />
+            </div>
+            <div class="form-group">
+              <label>Método *</label>
+              <textarea v-model="resumoMetodo" class="input-field textarea" rows="3"
+                placeholder="Descreva a metodologia utilizada: tipo de pesquisa, coleta e análise de dados." :disabled="submitting" />
+            </div>
+            <div class="form-group">
+              <label>Resultados *</label>
+              <textarea v-model="resumoResultados" class="input-field textarea" rows="4"
+                placeholder="Apresente os principais resultados e descobertas do trabalho." :disabled="submitting" />
+            </div>
+            <div class="form-group">
+              <label>Conclusões *</label>
+              <textarea v-model="resumoConclusoes" class="input-field textarea" rows="3"
+                placeholder="Resuma as conclusões e as implicações práticas ou teóricas do trabalho." :disabled="submitting" />
+            </div>
+          </template>
 
           <div class="manual-divider">Palavras-chave e referências</div>
           <div class="form-group">
@@ -610,6 +704,14 @@ async function submitWork() {
 .hint--warn    { color: #92400e; }
 .hint--loading { color: #6b7280; }
 .alert { padding: .65rem 1rem; border-radius: 8px; font-size: .88rem; font-weight: 600; margin-bottom: 1rem; }
-.alert--ok  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-.alert--err { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.alert--ok   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.alert--err  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.alert--warn { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
+.motivo-text { font-size: .85rem; color: #991b1b; margin: .5rem 0 0; background: #fee2e2; padding: .4rem .65rem; border-radius: 6px; }
+.history-list { display: flex; flex-direction: column; gap: .5rem; }
+.history-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: .5rem .65rem; border: 1px solid #e5e7eb; border-radius: 7px; }
+.history-info { flex: 1; min-width: 0; }
+.history-titulo { font-size: .87rem; font-weight: 600; margin: 0 0 .15rem; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history-meta { font-size: .78rem; color: #6b7280; margin: 0 0 .15rem; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.history-motivo { font-size: .78rem; color: #991b1b; margin: .1rem 0 0; }
 </style>

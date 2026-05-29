@@ -31,10 +31,15 @@ type WorkRow = {
   aluno: { id: number; name: string; email: string } | null
   arquivoUrl: string | null
   tipoSubmissao: 'manual' | 'arquivo' | null
+  motivo: string | null
 }
 
 const toast = useToastStore()
 const confirm = useConfirmStore()
+
+const motivoInput = ref('')
+const showMotivoModal = ref(false)
+const pendingModerateStatus = ref<'Aprovado' | 'Reprovado' | null>(null)
 
 const page = ref(1)
 const limit = ref(20)
@@ -70,16 +75,39 @@ async function moderate(status: 'Aprovado' | 'Reprovado') {
     toast.error('Selecione ao menos um trabalho.')
     return
   }
-  const label = status === 'Aprovado' ? 'aprovar' : 'reprovar'
-  const ok = await confirm.confirm({ message: `Deseja ${label} ${selected.value.length} trabalho(s)?`, tone: status === 'Reprovado' ? 'danger' : 'default' })
+  if (status === 'Reprovado') {
+    pendingModerateStatus.value = status
+    motivoInput.value = ''
+    showMotivoModal.value = true
+    return
+  }
+  const ok = await confirm.confirm({ message: `Deseja aprovar ${selected.value.length} trabalho(s)?`, tone: 'default' })
   if (!ok) return
   try {
     await client.patch('/evidence-journey/works/moderate', { ids: selected.value, status })
-    toast.success(`${selected.value.length} trabalho(s) ${status.toLowerCase()}(s).`)
+    toast.success(`${selected.value.length} trabalho(s) aprovado(s).`)
     selected.value = []
     execute()
   } catch {
     toast.error('Erro ao moderar trabalhos.')
+  }
+}
+
+async function confirmReprovar() {
+  if (!motivoInput.value.trim()) return
+  showMotivoModal.value = false
+  try {
+    await client.patch('/evidence-journey/works/moderate', {
+      ids: selected.value,
+      status: 'Reprovado',
+      motivo: motivoInput.value.trim(),
+    })
+    toast.success(`${selected.value.length} trabalho(s) reprovado(s).`)
+    selected.value = []
+    motivoInput.value = ''
+    execute()
+  } catch {
+    toast.error('Erro ao reprovar trabalhos.')
   }
 }
 
@@ -141,6 +169,19 @@ const STATUS_COLORS: Record<string, string> = {
       </span>
     </div>
 
+    <!-- ── Modal motivo reprovação ─────────────────────────────────── -->
+    <div v-if="showMotivoModal" class="modal-overlay">
+      <div class="modal-box">
+        <h3>Motivo da reprovação</h3>
+        <p>Informe o motivo para reprovar {{ selected.length }} trabalho(s). O aluno verá esta mensagem.</p>
+        <textarea v-model="motivoInput" class="input-field" rows="4" placeholder="Descreva o motivo da reprovação…" style="width:100%;resize:vertical;margin-top:.5rem" />
+        <div class="modal-actions">
+          <button class="btn btn--danger" :disabled="!motivoInput.trim()" @click="confirmReprovar">Reprovar</button>
+          <button class="btn btn--secondary" @click="showMotivoModal = false; motivoInput = ''">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
     <UiConnectionRetry v-if="failed" @retry="execute" />
 
     <UiAsyncPanel :loading="loading">
@@ -167,6 +208,7 @@ const STATUS_COLORS: Record<string, string> = {
               <td>{{ w.aluno?.name ?? '—' }}</td>
               <td>
                 <span class="status-badge" :style="{ background: STATUS_COLORS[w.status] + '20', color: STATUS_COLORS[w.status] }">{{ w.status }}</span>
+                <p v-if="w.motivo && w.status === 'Reprovado'" class="motivo-text">{{ w.motivo }}</p>
               </td>
               <td>
                 <span v-if="w.tipoSubmissao === 'manual'"  class="tipo-badge tipo-badge--manual">Formulário</span>
@@ -232,4 +274,11 @@ const STATUS_COLORS: Record<string, string> = {
 .plc-url   { font-size: .78rem; color: #166534; opacity: .75; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 .plc-action { font-size: .82rem; font-weight: 700; color: #166534; white-space: nowrap; padding: .3rem .75rem; border: 1.5px solid #86efac; border-radius: 20px; flex-shrink: 0; }
 .plc-action--copied { background: #16a34a; color: #fff; border-color: #16a34a; }
+.motivo-text { font-size: .75rem; color: #dc2626; margin: .2rem 0 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn--secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000; }
+.modal-box { background:#fff;border-radius:12px;padding:1.5rem;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2); }
+.modal-box h3 { margin:0 0 .5rem;font-size:1rem; }
+.modal-box p { font-size:.87rem;color:#555;margin:0 0 .5rem; }
+.modal-actions { display:flex;gap:.75rem;margin-top:1rem;justify-content:flex-end; }
 </style>

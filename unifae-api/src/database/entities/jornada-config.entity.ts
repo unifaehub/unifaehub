@@ -15,6 +15,22 @@ export class JornadaConfigEntity {
   @Column({ name: 'datas_evento', type: 'simple-array', nullable: true })
   datasEvento: string[] | null;
 
+  @Column({ name: 'submissao_inicio', type: 'date', nullable: true })
+  submissaoInicio: string | null;
+
+  @Column({ name: 'submissao_fim', type: 'date', nullable: true })
+  submissaoFim: string | null;
+
+  @Column({ name: 'avaliacao_inicio', type: 'date', nullable: true })
+  avaliacaoInicio: string | null;
+
+  @Column({ name: 'avaliacao_fim', type: 'date', nullable: true })
+  avaliacaoFim: string | null;
+
+  /** Seções dinâmicas do resumo ordenadas por ordem. */
+  @Column({ name: 'secoes_resumo', type: 'json', nullable: true })
+  secoesResumo: { id: string; titulo: string; ordem: number; obrigatorio: boolean }[] | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

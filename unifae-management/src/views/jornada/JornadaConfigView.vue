@@ -12,26 +12,91 @@ const toast = useToastStore()
 const confirm = useConfirmStore()
 
 // ── Config ────────────────────────────────────────────────────────────────
-type Config = { eventoNome: string | null; eventoLocal: string | null; datasEvento: string[] | null }
-const config      = ref<Config>({ eventoNome: null, eventoLocal: null, datasEvento: null })
-const savedConfig = ref<Config>({ eventoNome: null, eventoLocal: null, datasEvento: null })
+type SecaoResumo = { id: string; titulo: string; ordem: number; obrigatorio: boolean }
+type Config = {
+  eventoNome: string | null
+  eventoLocal: string | null
+  datasEvento: string[] | null
+  submissaoInicio: string | null
+  submissaoFim: string | null
+  avaliacaoInicio: string | null
+  avaliacaoFim: string | null
+  secoesResumo: SecaoResumo[] | null
+}
+const DEFAULT_SECOES: SecaoResumo[] = [
+  { id: 'introducao', titulo: 'Introdução', ordem: 1, obrigatorio: true },
+  { id: 'objetivos',  titulo: 'Objetivos',  ordem: 2, obrigatorio: true },
+  { id: 'metodo',     titulo: 'Método',     ordem: 3, obrigatorio: true },
+  { id: 'resultados', titulo: 'Resultados', ordem: 4, obrigatorio: true },
+  { id: 'conclusoes', titulo: 'Conclusões', ordem: 5, obrigatorio: true },
+]
+const emptyConfig = (): Config => ({
+  eventoNome: null, eventoLocal: null, datasEvento: null,
+  submissaoInicio: null, submissaoFim: null, avaliacaoInicio: null, avaliacaoFim: null,
+  secoesResumo: null,
+})
+const config      = ref<Config>(emptyConfig())
+const savedConfig = ref<Config>(emptyConfig())
 const loadingConfig = ref(false)
 const failedConfig  = ref(false)
 const savingConfig  = ref(false)
 const newDataInput  = ref('')
+
+// Seções do resumo
+const secoes = ref<SecaoResumo[]>([...DEFAULT_SECOES])
+const novaSecaoTitulo = ref('')
+let dragIdx = -1
+
+function secaoDragStart(idx: number) { dragIdx = idx }
+function secaoDragOver(idx: number) {
+  if (dragIdx === idx || dragIdx === -1) return
+  const arr = secoes.value
+  const moved = arr.splice(dragIdx, 1)[0]!
+  arr.splice(idx, 0, moved)
+  secoes.value = arr.map((s, i) => ({ ...s, ordem: i + 1 }))
+  dragIdx = idx
+}
+function secaoDrop() { dragIdx = -1 }
+function addSecao() {
+  const titulo = novaSecaoTitulo.value.trim()
+  if (!titulo) return
+  const id = titulo.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  secoes.value.push({ id: id || `secao-${Date.now()}`, titulo, ordem: secoes.value.length + 1, obrigatorio: false })
+  secoes.value = secoes.value.map((s, i) => ({ ...s, ordem: i + 1 }))
+  novaSecaoTitulo.value = ''
+}
+function removeSecao(idx: number) {
+  secoes.value.splice(idx, 1)
+  secoes.value = secoes.value.map((s, i) => ({ ...s, ordem: i + 1 }))
+}
 
 // Desabilitar salvar se não houver alterações
 const hasConfigChanges = computed(() => {
   const c = config.value
   const s = savedConfig.value
   if (c.eventoNome !== s.eventoNome || c.eventoLocal !== s.eventoLocal) return true
+  if (c.submissaoInicio !== s.submissaoInicio || c.submissaoFim !== s.submissaoFim) return true
+  if (c.avaliacaoInicio !== s.avaliacaoInicio || c.avaliacaoFim !== s.avaliacaoFim) return true
   const cd = [...(c.datasEvento ?? [])].sort().join(',')
   const sd = [...(s.datasEvento ?? [])].sort().join(',')
-  return cd !== sd
+  if (cd !== sd) return true
+  // Seções
+  const cs = JSON.stringify(secoes.value)
+  const ss = JSON.stringify(s.secoesResumo ?? DEFAULT_SECOES)
+  return cs !== ss
 })
 
 function cloneConfig(c: Config): Config {
-  return { eventoNome: c.eventoNome, eventoLocal: c.eventoLocal, datasEvento: c.datasEvento ? [...c.datasEvento] : null }
+  return {
+    eventoNome: c.eventoNome,
+    eventoLocal: c.eventoLocal,
+    datasEvento: c.datasEvento ? [...c.datasEvento] : null,
+    submissaoInicio: c.submissaoInicio,
+    submissaoFim: c.submissaoFim,
+    avaliacaoInicio: c.avaliacaoInicio,
+    avaliacaoFim: c.avaliacaoFim,
+    secoesResumo: c.secoesResumo ? c.secoesResumo.map(s => ({ ...s })) : null,
+  }
 }
 
 async function loadConfig() {
@@ -40,6 +105,7 @@ async function loadConfig() {
     const { data } = await client.get('/evidence-journey/config')
     config.value      = data
     savedConfig.value = cloneConfig(data)
+    secoes.value = data.secoesResumo ? data.secoesResumo.map((s: SecaoResumo) => ({ ...s })) : [...DEFAULT_SECOES]
   }
   catch { failedConfig.value = true }
   finally { loadingConfig.value = false }
@@ -52,8 +118,13 @@ async function saveConfig() {
       eventoNome: config.value.eventoNome || null,
       eventoLocal: config.value.eventoLocal || null,
       datasEvento: config.value.datasEvento,
+      submissaoInicio: config.value.submissaoInicio || null,
+      submissaoFim: config.value.submissaoFim || null,
+      avaliacaoInicio: config.value.avaliacaoInicio || null,
+      avaliacaoFim: config.value.avaliacaoFim || null,
+      secoesResumo: secoes.value,
     })
-    savedConfig.value = cloneConfig(config.value)
+    savedConfig.value = cloneConfig({ ...config.value, secoesResumo: secoes.value.map(s => ({ ...s })) })
     toast.success('Configurações salvas.')
   } catch { toast.error('Erro ao salvar configurações.') }
   finally { savingConfig.value = false }
@@ -281,9 +352,67 @@ onMounted(() => { loadConfig(); loadSectors() })
           </div>
         </div>
 
+        <div class="form-group">
+          <label>Períodos do evento</label>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="sublabel">Submissão — Início</label>
+              <input v-model="config.submissaoInicio" type="date" class="input-field" />
+            </div>
+            <div class="form-group">
+              <label class="sublabel">Submissão — Fim</label>
+              <input v-model="config.submissaoFim" type="date" class="input-field" />
+            </div>
+            <div class="form-group">
+              <label class="sublabel">Avaliação — Início</label>
+              <input v-model="config.avaliacaoInicio" type="date" class="input-field" />
+            </div>
+            <div class="form-group">
+              <label class="sublabel">Avaliação — Fim</label>
+              <input v-model="config.avaliacaoFim" type="date" class="input-field" />
+            </div>
+          </div>
+          <p class="field-hint">Deixe em branco para não restringir o período de submissão/avaliação.</p>
+        </div>
+
         <button class="btn btn--primary" :disabled="savingConfig || !hasConfigChanges" @click="saveConfig">
           {{ savingConfig ? 'Salvando…' : 'Salvar configurações' }}
         </button>
+      </UiAsyncPanel>
+    </section>
+
+    <!-- ── Seções do Resumo ──────────────────────────────────────────── -->
+    <section class="card">
+      <div class="card__header">
+        <h3 class="card__title">Seções do Resumo</h3>
+      </div>
+      <p class="card__desc">Defina as seções que os alunos devem preencher ao submeter o resumo pelo formulário. Arraste para reordenar.</p>
+      <UiAsyncPanel :loading="loadingConfig">
+        <div class="secoes-list">
+          <div
+            v-for="(s, idx) in secoes" :key="s.id"
+            class="secao-row"
+            draggable="true"
+            @dragstart="secaoDragStart(idx)"
+            @dragover.prevent="secaoDragOver(idx)"
+            @drop="secaoDrop()"
+          >
+            <span class="drag-handle">⠿</span>
+            <span class="secao-ordem">{{ s.ordem }}.</span>
+            <span class="secao-titulo">{{ s.titulo }}</span>
+            <label class="obrig-label">
+              <input type="checkbox" v-model="s.obrigatorio" />
+              Obrigatória
+            </label>
+            <button class="btn-link btn-link--danger" @click="removeSecao(idx)">Remover</button>
+          </div>
+          <div v-if="!secoes.length" class="empty-hint">Nenhuma seção configurada.</div>
+        </div>
+        <div class="add-secao-row">
+          <input v-model="novaSecaoTitulo" type="text" class="input-field" placeholder="Título da nova seção…" @keyup.enter="addSecao" />
+          <button class="btn btn--outline" @click="addSecao">+ Adicionar seção</button>
+        </div>
+        <p class="field-hint" style="margin-top:.5rem">As alterações nas seções são salvas junto com as configurações do evento.</p>
       </UiAsyncPanel>
     </section>
 
@@ -455,6 +584,15 @@ onMounted(() => { loadConfig(); loadSectors() })
 .data-table th { font-weight: 600; font-size: .78rem; text-transform: uppercase; color: #6b7280; }
 .actions-cell { display: flex; gap: .5rem; }
 .empty-row { text-align: center; color: #9ca3af; padding: 1rem; }
+.sublabel { font-weight: 400 !important; color: #6b7280 !important; }
+.secoes-list { display: flex; flex-direction: column; gap: .4rem; margin-bottom: .75rem; }
+.secao-row { display: flex; align-items: center; gap: .6rem; padding: .4rem .6rem; border: 1px solid #e5e7eb; border-radius: 6px; cursor: grab; background: #fafafa; }
+.secao-row:active { cursor: grabbing; }
+.drag-handle { color: #9ca3af; font-size: 1rem; user-select: none; }
+.secao-ordem { font-size: .8rem; color: #6b7280; min-width: 20px; }
+.secao-titulo { flex: 1; font-size: .87rem; font-weight: 500; }
+.obrig-label { display: flex; align-items: center; gap: .3rem; font-size: .78rem; color: #374151; cursor: pointer; }
+.add-secao-row { display: flex; gap: .5rem; align-items: center; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .modal { background: #fff; border-radius: 10px; padding: 1.5rem; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
 .modal__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem; }
