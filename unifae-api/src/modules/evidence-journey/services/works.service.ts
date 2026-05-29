@@ -477,24 +477,26 @@ export class WorksService {
   }
 
   private saveBuffer(buffer: Buffer, alunoId: number, filename: string): string {
-    const uploadRoot =
-      this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
-    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId), 'resumo');
-    fs.mkdirSync(dir, { recursive: true });
+    const uploadRoot = this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
+    const relSegment = `evidence-works/${alunoId}/resumo`;
+    const absDir = path.isAbsolute(uploadRoot)
+      ? path.join(uploadRoot, relSegment)
+      : path.join(process.cwd(), uploadRoot, relSegment);
+    fs.mkdirSync(absDir, { recursive: true });
     const fname = `${Date.now()}-${filename}`;
-    const filePath = path.join(dir, fname);
-    fs.writeFileSync(filePath, buffer);
-    return filePath;
+    fs.writeFileSync(path.join(absDir, fname), buffer);
+    return `/uploads/${relSegment}/${fname}`;
   }
 
   private saveFile(file: UploadedMulterFile, alunoId: number, subfolder = 'resumo'): string {
-    const uploadRoot =
-      this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
-    const dir = path.join(uploadRoot, 'evidence-works', String(alunoId), subfolder);
-    fs.mkdirSync(dir, { recursive: true });
+    const uploadRoot = this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
+    const relSegment = `evidence-works/${alunoId}/${subfolder}`;
+    const absDir = path.isAbsolute(uploadRoot)
+      ? path.join(uploadRoot, relSegment)
+      : path.join(process.cwd(), uploadRoot, relSegment);
+    fs.mkdirSync(absDir, { recursive: true });
     const filename = `${Date.now()}-${file.originalname}`;
-    const filePath = path.join(dir, filename);
-    fs.writeFileSync(filePath, file.buffer);
-    return filePath;
+    fs.writeFileSync(path.join(absDir, filename), file.buffer);
+    return `/uploads/${relSegment}/${filename}`;
   }
 }

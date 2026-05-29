@@ -37,9 +37,13 @@ type WorkRow = {
 const toast = useToastStore()
 const confirm = useConfirmStore()
 
+// Modal de inserção de motivo ao reprovar
 const motivoInput = ref('')
 const showMotivoModal = ref(false)
 const pendingModerateStatus = ref<'Aprovado' | 'Reprovado' | null>(null)
+
+// Modal de visualização de motivo na tabela
+const viewMotivo = ref<string | null>(null)
 
 const page = ref(1)
 const limit = ref(20)
@@ -182,6 +186,17 @@ const STATUS_COLORS: Record<string, string> = {
       </div>
     </div>
 
+    <!-- Modal: visualizar motivo de reprovação -->
+    <div v-if="viewMotivo" class="modal-overlay" @click.self="viewMotivo = null">
+      <div class="modal-box">
+        <h3>Motivo da reprovação</h3>
+        <p class="motivo-body">{{ viewMotivo }}</p>
+        <div class="modal-actions">
+          <button class="btn btn--secondary" @click="viewMotivo = null">Fechar</button>
+        </div>
+      </div>
+    </div>
+
     <UiConnectionRetry v-if="failed" @retry="execute" />
 
     <UiAsyncPanel :loading="loading">
@@ -207,8 +222,10 @@ const STATUS_COLORS: Record<string, string> = {
               <td>{{ w.cursoTrabalho }}</td>
               <td>{{ w.aluno?.name ?? '—' }}</td>
               <td>
-                <span class="status-badge" :style="{ background: STATUS_COLORS[w.status] + '20', color: STATUS_COLORS[w.status] }">{{ w.status }}</span>
-                <p v-if="w.motivo && w.status === 'Reprovado'" class="motivo-text">{{ w.motivo }}</p>
+                <div class="status-cell">
+                  <span class="status-badge" :style="{ background: STATUS_COLORS[w.status] + '20', color: STATUS_COLORS[w.status] }">{{ w.status }}</span>
+                  <button v-if="w.motivo && w.status === 'Reprovado'" class="btn-motivo" title="Ver motivo da reprovação" @click="viewMotivo = w.motivo">💬</button>
+                </div>
               </td>
               <td>
                 <span v-if="w.tipoSubmissao === 'manual'"  class="tipo-badge tipo-badge--manual">Formulário</span>
@@ -274,7 +291,10 @@ const STATUS_COLORS: Record<string, string> = {
 .plc-url   { font-size: .78rem; color: #166534; opacity: .75; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 .plc-action { font-size: .82rem; font-weight: 700; color: #166534; white-space: nowrap; padding: .3rem .75rem; border: 1.5px solid #86efac; border-radius: 20px; flex-shrink: 0; }
 .plc-action--copied { background: #16a34a; color: #fff; border-color: #16a34a; }
-.motivo-text { font-size: .75rem; color: #dc2626; margin: .2rem 0 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-cell { display: flex; align-items: center; gap: .35rem; }
+.btn-motivo { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; opacity: .75; }
+.btn-motivo:hover { opacity: 1; }
+.motivo-body { font-size: .9rem; color: #374151; line-height: 1.6; white-space: pre-wrap; margin: .5rem 0 0; }
 .btn--secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
 .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000; }
 .modal-box { background:#fff;border-radius:12px;padding:1.5rem;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2); }

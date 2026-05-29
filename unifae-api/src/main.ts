@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
+import * as express from 'express';
+import * as path from 'path';
 import { AppModule } from './app.module';
 import { AppHomeModule } from './modules/app-home/app-home.module';
 import { IdentityAccessModule } from './modules/identity-access/identity-access.module';
@@ -68,6 +70,13 @@ async function bootstrap() {
   });
 
   const config = app.get(ConfigService);
+
+  // Serve uploads directory as static files at /uploads
+  const uploadRoot = config.get<{ root: string }>('uploads')?.root ?? 'uploads';
+  const uploadAbsPath = path.isAbsolute(uploadRoot)
+    ? uploadRoot
+    : path.join(process.cwd(), uploadRoot);
+  app.use('/uploads', express.static(uploadAbsPath));
   if (config.get<boolean>('swagger.enabled')) {
     const generalSwaggerConfig = new DocumentBuilder()
       .setTitle('UNIFAE Care API')

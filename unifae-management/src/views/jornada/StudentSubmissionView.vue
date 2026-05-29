@@ -247,8 +247,11 @@ async function lookupRa(idx: number, ra: string) {
     item.nome     = data?.alunoNome ?? null
     item.notFound = !data?.alunoNome
     if (idx === 0) {
-      myWork.value = data ?? null
+      myWork.value  = data ?? null
       hasWork.value = !!data
+      // Limpar mensagens de sessão anterior ao consultar um novo RA
+      successMsg.value = ''
+      errorMsg.value   = ''
       if (data?.alunoNome) fetchHistory(ra)
     }
   } catch {
