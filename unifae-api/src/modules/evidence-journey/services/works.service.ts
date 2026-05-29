@@ -83,7 +83,8 @@ export class WorksService {
     file?: UploadedMulterFile,
   ): Promise<EvidenceWorkEntity> {
     const alunoId = dto.alunoId ?? currentUser.id;
-    const arquivoUrl = file ? this.saveFile(file, alunoId) : null;
+    const raLabel = currentUser.ra ?? String(alunoId);
+    const arquivoUrl = file ? this.saveFile(file, alunoId, raLabel) : null;
 
     const work = this.works.create({
       titulo: dto.titulo,
@@ -116,7 +117,7 @@ export class WorksService {
       );
     }
 
-    const arquivoUrl = file ? this.saveFile(file, alunoId) : null;
+    const arquivoUrl = file ? this.saveFile(file, alunoId, String(alunoId)) : null;
     const work = this.works.create({
       titulo: dto.titulo,
       cursoTrabalho: dto.cursoTrabalho,
@@ -322,9 +323,11 @@ export class WorksService {
     let coorientadoresParsed: CoorientadorPayload[] = [];
     try { coorientadoresParsed = dto.coorientadores ? JSON.parse(dto.coorientadores) : []; } catch { /* ignore */ }
 
+    const ra = primary.ra ?? String(primary.id);
+
     let arquivoUrl: string | null = null;
     if (tipoSubmissao === 'arquivo' && file) {
-      arquivoUrl = this.saveFile(file, primary.id);
+      arquivoUrl = this.saveFile(file, primary.id, ra);
     } else if (tipoSubmissao === 'manual') {
       const autores = [
         { nome: primary.name, email: primary.email ?? undefined },
@@ -347,11 +350,11 @@ export class WorksService {
         referencias,
       });
 
-      arquivoUrl = this.saveBuffer(buffer, primary.id, 'resumo.docx');
+      arquivoUrl = this.saveBuffer(buffer, primary.id, ra, 'resumo.docx');
     }
 
     const apresentacaoUrl = apresentacaoFile
-      ? this.saveFile(apresentacaoFile, primary.id, 'apresentacao')
+      ? this.saveFile(apresentacaoFile, primary.id, ra, 'apresentacao')
       : null;
 
     const work = this.works.create({
@@ -476,26 +479,39 @@ export class WorksService {
     return { ...work, alunoNome: student.name };
   }
 
-  private saveBuffer(buffer: Buffer, alunoId: number, filename: string): string {
+  /** Normaliza uma string para uso seguro em nomes de arquivo. */
+  private slugify(s: string): string {
+    return s
+      .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
+      .replace(/[^a-zA-Z0-9_-]/g, '_')                  // só alfanum + _ -
+      .replace(/_+/g, '_')
+      .slice(0, 40);
+  }
+
+  private saveBuffer(buffer: Buffer, alunoId: number, ra: string, filename: string): string {
     const uploadRoot = this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
     const relSegment = `evidence-works/${alunoId}/resumo`;
     const absDir = path.isAbsolute(uploadRoot)
       ? path.join(uploadRoot, relSegment)
       : path.join(process.cwd(), uploadRoot, relSegment);
     fs.mkdirSync(absDir, { recursive: true });
-    const fname = `${Date.now()}-${filename}`;
+    const ext  = path.extname(filename) || '.docx';
+    const base = path.basename(filename, ext);
+    const fname = `RA${this.slugify(ra)}_${this.slugify(base)}_${Date.now()}${ext}`;
     fs.writeFileSync(path.join(absDir, fname), buffer);
     return `/uploads/${relSegment}/${fname}`;
   }
 
-  private saveFile(file: UploadedMulterFile, alunoId: number, subfolder = 'resumo'): string {
+  private saveFile(file: UploadedMulterFile, alunoId: number, ra: string, subfolder = 'resumo'): string {
     const uploadRoot = this.config.get<{ root: string }>('uploads')?.root ?? 'uploads';
     const relSegment = `evidence-works/${alunoId}/${subfolder}`;
     const absDir = path.isAbsolute(uploadRoot)
       ? path.join(uploadRoot, relSegment)
       : path.join(process.cwd(), uploadRoot, relSegment);
     fs.mkdirSync(absDir, { recursive: true });
-    const filename = `${Date.now()}-${file.originalname}`;
+    const ext  = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext);
+    const filename = `RA${this.slugify(ra)}_${this.slugify(base)}_${Date.now()}${ext}`;
     fs.writeFileSync(path.join(absDir, filename), file.buffer);
     return `/uploads/${relSegment}/${filename}`;
   }
