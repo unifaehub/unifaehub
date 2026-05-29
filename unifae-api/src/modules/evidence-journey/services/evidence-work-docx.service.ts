@@ -6,6 +6,7 @@ export interface WorkDocxData {
   /** Responsável principal + integrantes, em ordem. */
   autores: { nome: string; email?: string }[];
   orientador: { nome: string; email: string } | null;
+  coorientadores: { nome: string; email: string }[];
   cursoTrabalho: string;
   resumo: {
     introducao: string;
@@ -63,6 +64,16 @@ export class EvidenceWorkDocxService {
       children.push(
         new Paragraph({
           children: [boldRun('Orientador(a): '), normalRun(orientLine)],
+        }),
+      );
+    }
+
+    // ── Co-orientadores ────────────────────────────────────────────────
+    for (const co of data.coorientadores ?? []) {
+      const coLine = co.email ? `${co.nome} – ${co.email}` : co.nome;
+      children.push(
+        new Paragraph({
+          children: [boldRun('Coorientador(a): '), normalRun(coLine)],
         }),
       );
     }

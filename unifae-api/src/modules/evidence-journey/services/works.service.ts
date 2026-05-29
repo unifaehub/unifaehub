@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
-import { EvidenceWorkStatus, WorkCategory, WorkType } from '../../../database/entities/enums';
+import { EvidenceWorkStatus, UserRole, WorkCategory, WorkType } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.entity';
 import { parsePageLimit, toPaginated } from '../../../common/pagination';
@@ -187,8 +187,10 @@ export class WorksService {
       categoria: string;
       tipoTrabalho?: string;
       tipoSubmissao?: 'manual' | 'arquivo';
-      orientadorNome?: string;
-      orientadorEmail?: string;
+      /** JSON string: { professorId?: number; nome: string; email: string } */
+      orientador?: string;
+      /** JSON string: { tipo:'interno'|'externo'; professorId?:number; nome:string; email:string }[] */
+      coorientadores?: string;
       resumoIntroducao?: string;
       resumoObjetivos?: string;
       resumoMetodo?: string;
@@ -241,15 +243,20 @@ export class WorksService {
       );
     }
 
+    // Parse orientador e coorientadores (enviados como JSON string via FormData)
+    type OrientadorPayload = { professorId?: number; nome: string; email: string };
+    type CoorientadorPayload = { tipo: 'interno' | 'externo'; professorId?: number; nome: string; email: string };
+
+    let orientadorParsed: OrientadorPayload | null = null;
+    try { orientadorParsed = dto.orientador ? JSON.parse(dto.orientador) : null; } catch { /* ignore */ }
+
+    let coorientadoresParsed: CoorientadorPayload[] = [];
+    try { coorientadoresParsed = dto.coorientadores ? JSON.parse(dto.coorientadores) : []; } catch { /* ignore */ }
+
     let arquivoUrl: string | null = null;
     if (tipoSubmissao === 'arquivo' && file) {
       arquivoUrl = this.saveFile(file, primary.id);
     } else if (tipoSubmissao === 'manual') {
-      const orientador =
-        dto.orientadorNome?.trim()
-          ? { nome: dto.orientadorNome.trim(), email: dto.orientadorEmail?.trim() ?? '' }
-          : null;
-
       const autores = [
         { nome: primary.name, email: primary.email ?? undefined },
         ...extras,
@@ -261,10 +268,11 @@ export class WorksService {
         .filter(Boolean);
 
       const buffer = await this.docxGen.generate({
-        titulo:        dto.titulo,
+        titulo:         dto.titulo,
         autores,
-        orientador,
-        cursoTrabalho: dto.cursoTrabalho,
+        orientador:     orientadorParsed,
+        coorientadores: coorientadoresParsed,
+        cursoTrabalho:  dto.cursoTrabalho,
         resumo: {
           introducao: dto.resumoIntroducao!,
           objetivos:  dto.resumoObjetivos!,
@@ -279,11 +287,6 @@ export class WorksService {
       arquivoUrl = this.saveBuffer(buffer, primary.id, 'resumo.docx');
     }
 
-    const orientadorSaved =
-      dto.orientadorNome?.trim()
-        ? { nome: dto.orientadorNome.trim(), email: dto.orientadorEmail?.trim() ?? '' }
-        : null;
-
     const work = this.works.create({
       titulo:            dto.titulo,
       cursoTrabalho:     dto.cursoTrabalho,
@@ -295,7 +298,8 @@ export class WorksService {
       alunoId:           primary.id,
       integrantes:       extras.length ? extras : null,
       tipoSubmissao,
-      orientador:        orientadorSaved,
+      orientador:        orientadorParsed,
+      coorientadores:    coorientadoresParsed.length ? coorientadoresParsed : null,
       resumoIntroducao:  dto.resumoIntroducao?.trim() ?? null,
       resumoObjetivos:   dto.resumoObjetivos?.trim()  ?? null,
       resumoMetodo:      dto.resumoMetodo?.trim()     ?? null,
@@ -306,6 +310,15 @@ export class WorksService {
     });
     const saved = await this.works.save(work);
     return { ...saved, alunoNome: primary.name };
+  }
+
+  /** Lista professores cadastrados — usado pelo formulário público de submissão. */
+  async listPublicProfessors() {
+    return this.users.find({
+      where: { role: UserRole.PROFESSOR, deletedAt: IsNull() },
+      order: { name: 'ASC' },
+      select: ['id', 'name', 'email'],
+    });
   }
 
   /** Consulta pública do trabalho de um aluno pelo RA. */

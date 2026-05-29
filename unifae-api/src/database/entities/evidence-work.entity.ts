@@ -65,9 +65,13 @@ export class EvidenceWorkEntity {
   @Column({ name: 'tipo_submissao', type: 'varchar', length: 10, nullable: true })
   tipoSubmissao: 'manual' | 'arquivo' | null;
 
-  /** Orientador do trabalho (nome completo com titulação + email). */
+  /** Orientador principal (professor interno ou externo). */
   @Column({ name: 'orientador', type: 'json', nullable: true })
-  orientador: { nome: string; email: string } | null;
+  orientador: { professorId?: number; nome: string; email: string } | null;
+
+  /** Co-orientadores (0-N, internos ou externos). */
+  @Column({ name: 'coorientadores', type: 'json', nullable: true })
+  coorientadores: { tipo: 'interno' | 'externo'; professorId?: number; nome: string; email: string }[] | null;
 
   @Column({ name: 'resumo_introducao', type: 'text', nullable: true })
   resumoIntroducao: string | null;

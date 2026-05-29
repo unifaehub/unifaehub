@@ -16,6 +16,12 @@ const MAX_FILE_BYTES = 3 * 1024 * 1024; // 3 MB
 export class PublicWorksController {
   constructor(private readonly works: WorksService) {}
 
+  /** Lista professores cadastrados para uso no formulário de submissão. */
+  @Get('professors')
+  listProfessors() {
+    return this.works.listPublicProfessors();
+  }
+
   /** Consulta o trabalho submetido pelo RA do aluno. */
   @Get('works/:ra')
   findByRa(@Param('ra') ra: string) {
@@ -34,8 +40,10 @@ export class PublicWorksController {
       categoria: string;
       tipoTrabalho?: string;
       tipoSubmissao?: 'manual' | 'arquivo';
-      orientadorNome?: string;
-      orientadorEmail?: string;
+      /** JSON string: { professorId?: number; nome: string; email: string } */
+      orientador?: string;
+      /** JSON string: array de co-orientadores */
+      coorientadores?: string;
       resumoIntroducao?: string;
       resumoObjetivos?: string;
       resumoMetodo?: string;
