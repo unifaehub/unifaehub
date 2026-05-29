@@ -259,9 +259,14 @@ export class UsersService {
       return reloaded ? this.toDto(reloaded) : this.toDto(row);
     }
 
-    const isSuperAdmin = actor.role === UserRole.ADMIN || actor.role === UserRole.MASTER;
+    const isMaster    = actor.role === UserRole.MASTER;
+    const isSuperAdmin = actor.role === UserRole.ADMIN || isMaster;
     if (!isSuperAdmin) {
       throw new ForbiddenException('Sem permissão para editar.');
+    }
+    // ADMIN não pode editar usuários com role MASTER — apenas o próprio MASTER pode
+    if (!isMaster && (row.role === UserRole.MASTER || dto.role === UserRole.MASTER)) {
+      throw new ForbiddenException('Apenas o administrador master pode gerenciar outros usuários master.');
     }
 
     const nextFrom = dto.activeFrom !== undefined ? dto.activeFrom : row.activeFrom;
@@ -340,9 +345,14 @@ export class UsersService {
   }
 
   async softDelete(id: number, actor: UserEntity, ctx: RequestContext | null) {
-    if (actor.role !== UserRole.ADMIN) throw new ForbiddenException('Apenas administradores podem excluir.');
+    const canDelete = actor.role === UserRole.ADMIN || actor.role === UserRole.MASTER;
+    if (!canDelete) throw new ForbiddenException('Apenas administradores podem excluir.');
     const row = await this.users.findOne({ where: { id } });
     if (!row || row.deletedAt) throw new NotFoundException('Usuário não encontrado.');
+    // ADMIN não pode excluir usuários MASTER
+    if (actor.role !== UserRole.MASTER && row.role === UserRole.MASTER) {
+      throw new ForbiddenException('Apenas o administrador master pode excluir outros usuários master.');
+    }
     row.deletedAt = new Date();
     row.active = false;
     await this.users.save(row);
@@ -358,7 +368,7 @@ export class UsersService {
   }
 
   private canAccessUserPhoto(actor: UserEntity, target: UserEntity): boolean {
-    if (actor.role === UserRole.ADMIN || actor.id === target.id) return true;
+    if (actor.role === UserRole.ADMIN || actor.role === UserRole.MASTER || actor.id === target.id) return true;
     if (actor.role === UserRole.COORDINATOR || actor.role === UserRole.PROFESSOR || actor.role === UserRole.STUDENT) {
       const sameCourse = actor.courseId == null || target.courseId === actor.courseId;
       const sameApp = actor.appId == null || target.appId === actor.appId;
@@ -376,7 +386,7 @@ export class UsersService {
 
     const user = await this.users.findOne({ where: { id, deletedAt: IsNull() } });
     if (!user) throw new NotFoundException('Usuário não encontrado.');
-    if (actor.role !== UserRole.ADMIN && actor.id !== user.id) {
+    if (actor.role !== UserRole.ADMIN && actor.role !== UserRole.MASTER && actor.id !== user.id) {
       throw new ForbiddenException('Sem permissão para alterar esta foto.');
     }
 

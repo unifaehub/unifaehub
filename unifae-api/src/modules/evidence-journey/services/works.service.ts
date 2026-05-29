@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, Repository } from 'typeorm';
 import { EvidenceWorkEntity } from '../../../database/entities/evidence-work.entity';
-import { EvidenceWorkStatus } from '../../../database/entities/enums';
+import { EvidenceWorkStatus, WorkCategory, WorkType } from '../../../database/entities/enums';
 import { UserEntity } from '../../../database/entities/user.entity';
 import { RoomBestWorkEntity } from '../../../database/entities/room-best-work.entity';
 import { parsePageLimit, toPaginated } from '../../../common/pagination';
@@ -25,6 +25,8 @@ export class WorksService {
     private readonly works: Repository<EvidenceWorkEntity>,
     @InjectRepository(RoomBestWorkEntity)
     private readonly bestWorks: Repository<RoomBestWorkEntity>,
+    @InjectRepository(UserEntity)
+    private readonly users: Repository<UserEntity>,
     private readonly config: ConfigService,
   ) {}
 
@@ -168,6 +170,56 @@ export class WorksService {
       .sort((a, b) => b.destaques - a.destaques);
 
     return { total, aprovados, reprovados, pendentes, inativos, porCurso, destaquesPorCurso };
+  }
+
+  /** Submissão pública sem login — identifica o aluno pelo RA. */
+  async publicSubmit(
+    dto: { ra: string; titulo: string; cursoTrabalho: string; categoria: string; tipoTrabalho?: string },
+    file?: UploadedMulterFile,
+  ) {
+    const student = await this.users.findOne({ where: { ra: dto.ra, deletedAt: IsNull() } });
+    if (!student) throw new NotFoundException('Aluno não encontrado. Verifique o RA informado.');
+
+    const existing = await this.works.findOne({
+      where: { alunoId: student.id, deletedAt: IsNull() },
+      order: { dataSubmissao: 'DESC' },
+    });
+
+    if (
+      existing &&
+      existing.status !== EvidenceWorkStatus.REPROVADO &&
+      existing.status !== EvidenceWorkStatus.INATIVO
+    ) {
+      throw new BadRequestException(
+        'Você já possui um trabalho ativo. Aguarde a análise ou entre em contato com a coordenação.',
+      );
+    }
+
+    const arquivoUrl = file ? this.saveFile(file, student.id) : null;
+    const work = this.works.create({
+      titulo:        dto.titulo,
+      cursoTrabalho: dto.cursoTrabalho,
+      categoria:     (dto.categoria as WorkCategory) ?? WorkCategory.JORNADA_EVIDENCIAS,
+      tipoTrabalho:  (dto.tipoTrabalho as WorkType) ?? null,
+      arquivoUrl,
+      status:        EvidenceWorkStatus.PENDENTE,
+      dataSubmissao: new Date(),
+      alunoId:       student.id,
+    });
+    const saved = await this.works.save(work);
+    return { ...saved, alunoNome: student.name };
+  }
+
+  /** Consulta pública do trabalho de um aluno pelo RA. */
+  async publicFindByRa(ra: string) {
+    const student = await this.users.findOne({ where: { ra } });
+    if (!student) return null;
+    const work = await this.works.findOne({
+      where: { alunoId: student.id, deletedAt: IsNull() },
+      order: { dataSubmissao: 'DESC' },
+    });
+    if (!work) return null;
+    return { ...work, alunoNome: student.name };
   }
 
   private saveFile(file: UploadedMulterFile, alunoId: number): string {

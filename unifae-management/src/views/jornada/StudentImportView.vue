@@ -56,12 +56,13 @@ async function doImport() {
       <h3 class="card__title">Como funciona</h3>
       <ol class="instructions">
         <li>Baixe o <button class="btn-link" @click="downloadTemplate">📥 template Excel</button></li>
-        <li>Preencha as colunas: <strong>Nome *</strong>, <strong>RA *</strong>, Email (opcional), Curso (opcional)</li>
+        <li>Preencha as colunas: <strong>Nome *</strong>, <strong>RA *</strong>, <strong>Email *</strong>, <strong>Curso *</strong></li>
+        <li>Curso deve estar em <strong>CAIXA ALTA</strong> e sem abreviações (ex: <em>ENGENHARIA DE SOFTWARE</em>)</li>
         <li>Salve o arquivo e faça o upload abaixo</li>
         <li>Alunos com RA já cadastrado são automaticamente ignorados</li>
       </ol>
       <p class="info-box">
-        🔑 Senha padrão criada para todos os alunos importados: <strong>Estudante@123</strong><br>
+        🔑 Uma senha única e aleatória é gerada para cada aluno importado (formato: <strong>Estudante@XXXXX</strong>).<br>
         Oriente os alunos a alterarem a senha no primeiro acesso.
       </p>
     </section>

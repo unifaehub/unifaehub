@@ -15,6 +15,13 @@ export interface ImportResult {
   rows: { nome: string; ra: string; status: 'imported' | 'skipped' | 'error'; reason?: string }[];
 }
 
+function randomPassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let suffix = '';
+  for (let i = 0; i < 5; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+  return `Estudante@${suffix}`;
+}
+
 @Injectable()
 export class StudentImportService {
   constructor(
@@ -25,12 +32,11 @@ export class StudentImportService {
   /** Gera o buffer do template XLSX para download. */
   getTemplate(): Buffer {
     const wb = XLSX.utils.book_new();
-    const headers = ['Nome *', 'RA *', 'Email (opcional)', 'Curso (opcional)'];
-    const example = ['João da Silva', '2024001', 'joao.silva@aluno.fae.br', 'Ciência da Computação'];
+    const headers = ['Nome *', 'RA *', 'Email *', 'Curso * (ex: ENGENHARIA DE SOFTWARE)'];
+    const example = ['João da Silva', '2024001', 'joao.silva@aluno.fae.br', 'ENGENHARIA DE SOFTWARE'];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);
 
-    // Larguras das colunas
-    ws['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 35 }, { wch: 30 }];
+    ws['!cols'] = [{ wch: 35 }, { wch: 12 }, { wch: 35 }, { wch: 40 }];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Alunos');
     return Buffer.from(XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }));
@@ -41,49 +47,47 @@ export class StudentImportService {
     const ws = wb.Sheets[wb.SheetNames[0]!];
     const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-    const hash = await bcrypt.hash('Estudante@123', 10);
     const result: ImportResult = { imported: 0, skipped: 0, errors: [], rows: [] };
 
-    // Ignorar linha de cabeçalho (primeira linha)
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i]!;
-      const nome    = String(row[0] ?? '').trim();
-      const ra      = String(row[1] ?? '').trim();
-      const email   = String(row[2] ?? '').trim() || null;
-      const curso   = String(row[3] ?? '').trim() || null;
+      const nome  = String(row[0] ?? '').trim();
+      const ra    = String(row[1] ?? '').trim();
+      const email = String(row[2] ?? '').trim();
+      const curso = String(row[3] ?? '').trim().toUpperCase();
 
-      if (!nome || !ra) {
-        if (nome || ra) {
-          result.errors.push(`Linha ${i + 1}: Nome e RA são obrigatórios.`);
-          result.rows.push({ nome: nome || '—', ra: ra || '—', status: 'error', reason: 'Nome ou RA ausente' });
-        }
+      // Linha completamente vazia — ignorar sem erro
+      if (!nome && !ra && !email && !curso) continue;
+
+      if (!nome || !ra || !email || !curso) {
+        result.errors.push(`Linha ${i + 1}: Nome, RA, Email e Curso são obrigatórios.`);
+        result.rows.push({ nome: nome || '—', ra: ra || '—', status: 'error', reason: 'Campo obrigatório ausente' });
         continue;
       }
 
-      // Verificar se RA já existe
-      const existing = await this.users.findOne({ where: { ra } });
-      if (existing) {
+      // RA já existe → ignorar
+      const existingRa = await this.users.findOne({ where: { ra } });
+      if (existingRa) {
         result.skipped++;
         result.rows.push({ nome, ra, status: 'skipped', reason: 'RA já cadastrado' });
         continue;
       }
 
-      // Gerar e-mail padrão se não fornecido
-      const finalEmail = email || `aluno.${ra}@unifae.local`;
-
-      // Verificar se e-mail já existe
-      const existingEmail = await this.users.findOne({ where: { email: finalEmail } });
-      const resolvedEmail = existingEmail ? `aluno.${ra}.${Date.now()}@unifae.local` : finalEmail;
+      // E-mail duplicado → gerar alternativo
+      const emailNorm = email.toLowerCase();
+      const existingEmail = await this.users.findOne({ where: { email: emailNorm } });
+      const resolvedEmail = existingEmail ? `aluno.${ra}.${Date.now()}@unifae.local` : emailNorm;
 
       try {
+        const hash = await bcrypt.hash(randomPassword(), 10);
         await this.users.save(
           this.users.create({
-            name:     nome,
+            name:      nome,
             ra,
-            email:    resolvedEmail,
-            password: hash,
-            role:     UserRole.STUDENT,
-            active:   true,
+            email:     resolvedEmail,
+            password:  hash,
+            role:      UserRole.STUDENT,
+            active:    true,
             cursoBase: curso,
           } as any),
         );

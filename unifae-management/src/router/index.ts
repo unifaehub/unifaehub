@@ -62,6 +62,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/jornada/submissao',
+      name: 'jornada-student-submission-public',
+      component: () => import('@/views/jornada/StudentSubmissionView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/MainLayout.vue'),
       meta: { requiresAuth: true },
@@ -324,7 +330,7 @@ const router = createRouter({
           path: 'jornada/meu-trabalho',
           name: 'jornada-student-submission',
           component: () => import('@/views/jornada/StudentSubmissionView.vue'),
-          meta: { searchPlaceholder: 'Meu trabalho…', roles: ['STUDENT'] satisfies Role[] },
+          meta: { searchPlaceholder: 'Meu trabalho…', roles: ['STUDENT', 'ADMIN', 'COORDINATOR', 'ADMIN_JORNADA'] satisfies Role[] },
         },
         {
           path: 'jornada/configuracoes',

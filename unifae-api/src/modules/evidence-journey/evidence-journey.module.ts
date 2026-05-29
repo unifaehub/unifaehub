@@ -32,6 +32,7 @@ import { QuestionsController } from './controllers/questions.controller';
 import { ProfessorAvailabilityController } from './controllers/professor-availability.controller';
 import { JornadaConfigController } from './controllers/jornada-config.controller';
 import { PublicRoomsController } from './controllers/public-rooms.controller';
+import { PublicWorksController } from './controllers/public-works.controller';
 import { StudentImportController } from './controllers/student-import.controller';
 import { StudentImportService } from './services/student-import.service';
 import { ReportProcessor } from './processors/report.processor';
@@ -71,6 +72,7 @@ import { AuditModule } from '../audit/audit.module';
     ProfessorAvailabilityController,
     JornadaConfigController,
     PublicRoomsController,
+    PublicWorksController,
     StudentImportController,
   ],
   providers: [
